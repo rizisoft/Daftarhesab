@@ -735,3 +735,62 @@ class MainActivity : AppCompatActivity() {
                             .setPositiveButton("بله") { _, _ ->
                                 entries.remove(e)
                                 resetEntryForm()
+                                saveData()
+                                updateLedgerUI()
+                            }
+                            .setNegativeButton("خیر", null)
+                            .show()
+                    }
+                }
+                card.addView(btnDelEntry)
+                entryListLayout.addView(card)
+            }
+        }
+
+        btnSale.setOnClickListener {
+            val desc = edtDesc.text.toString().trim()
+            val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
+            if (amount <= 0 || desc.isEmpty()) {
+                Toast.makeText(this, "نام کالا و مبلغ معتبر وارد کنید", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            if (editEntryId != null) {
+                entries.find { it.id == editEntryId }?.let { entry ->
+                    entry.type = "sale"
+                    entry.description = desc
+                    entry.amount = amount
+                }
+            } else {
+                entries.add(Entry(System.currentTimeMillis(), custId, "sale", desc, amount, getJalaliDate()))
+            }
+            resetEntryForm()
+            saveData()
+            updateLedgerUI()
+        }
+
+        btnPayment.setOnClickListener {
+            val desc = edtDesc.text.toString().trim()
+            val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
+            if (amount <= 0) {
+                Toast.makeText(this, "مبلغ معتبر وارد کنید", Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val finalDesc = if (desc.isEmpty()) "دریافت وجه" else desc
+            if (editEntryId != null) {
+                entries.find { it.id == editEntryId }?.let { entry ->
+                    entry.type = "payment"
+                    entry.description = finalDesc
+                    entry.amount = amount
+                }
+            } else {
+                entries.add(Entry(System.currentTimeMillis(), custId, "payment", finalDesc, amount, getJalaliDate()))
+            }
+            resetEntryForm()
+            saveData()
+            updateLedgerUI()
+        }
+
+        setContentView(rootLayout)
+        updateLedgerUI()
+    }
+}
