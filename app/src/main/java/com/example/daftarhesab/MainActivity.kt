@@ -72,11 +72,14 @@ class MainActivity : AppCompatActivity() {
         loadData()
         renderHome()
 
+        // مدیریت یکپارچه و دقیق کلید Back
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (activeCustId != null) {
+                    // اگر در صفحه حساب مشتری هستیم، برگردیم به صفحه اصلی
                     renderHome()
                 } else {
+                    // اگر در صفحه اصلی هستیم، با دو بار زدن در بازه ۲ ثانیه خارج شویم
                     if (backPressedTime + 2000 > System.currentTimeMillis()) {
                         isEnabled = false
                         onBackPressedDispatcher.onBackPressed()
@@ -397,9 +400,11 @@ class MainActivity : AppCompatActivity() {
                     gravity = Gravity.CENTER_VERTICAL
                     setPadding(28, 24, 28, 24)
                     background = makeRoundedCard(Color.WHITE, Color.parseColor("#E2E8F0"), 2, 20f)
+                    isLongClickable = true
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                         topMargin = 14
                     }
+                    // باز کردن منوی مدیریت با نگه‌داشتن انگشت روی کارت
                     setOnLongClickListener {
                         val options = arrayOf("ویرایش نام مشتری", "حذف مشتری")
                         AlertDialog.Builder(this@MainActivity)
