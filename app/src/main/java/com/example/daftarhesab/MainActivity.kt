@@ -73,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        autoBackupToDocuments()
+        autoBackupAllStorages()
     }
 
     private fun buildJsonString(): String {
@@ -104,14 +104,43 @@ class MainActivity : AppCompatActivity() {
 
     private fun saveData() {
         dbFile.writeText(buildJsonString(), Charsets.UTF_8)
+        autoBackupAllStorages()
     }
 
-    private fun autoBackupToDocuments() {
+    private fun autoBackupAllStorages() {
+        val jsonContent = buildJsonString()
+        
+        // 1. Save to App's public Documents directory (/storage/emulated/0/Documents/DaftarHesab/)
         try {
-            val backupDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: filesDir
-            if (!backupDir.exists()) backupDir.mkdirs()
-            val backupFile = File(backupDir, "DaftarHesab_AutoBackup.json")
-            backupFile.writeText(buildJsonString(), Charsets.UTF_8)
+            val publicDocDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
+            val targetDir = File(publicDocDir, "DaftarHesab")
+            if (!targetDir.exists()) targetDir.mkdirs()
+            File(targetDir, "DaftarHesab_AutoBackup.json").writeText(jsonContent, Charsets.UTF_8)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 2. Save to Internal App Files Documents
+        try {
+            val internalDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: filesDir
+            if (!internalDir.exists()) internalDir.mkdirs()
+            File(internalDir, "DaftarHesab_AutoBackup.json").writeText(jsonContent, Charsets.UTF_8)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
+        // 3. Save to Removable SD Card (if present)
+        try {
+            val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
+            if (externalDirs != null && externalDirs.size > 1) {
+                for (i in 1 until externalDirs.size) {
+                    val sdDir = externalDirs[i]
+                    if (sdDir != null && Environment.getExternalStorageState(sdDir) == Environment.MEDIA_MOUNTED) {
+                        if (!sdDir.exists()) sdDir.mkdirs()
+                        File(sdDir, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
+                    }
+                }
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -630,7 +659,7 @@ class MainActivity : AppCompatActivity() {
                         edtAmount.setText(e.amount.toString())
                         tvFormHeader.text = "\u062F\u0631 \u062D\u0627\u0644 \u0648\u06CC\u0631\u0627\u06CC\u0634 \u062A\u0631\u0627\u06A9\u0646\u0634..."
                         if (e.type == "sale") {
-                            btnSale.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A (\u0628\u062F\u0647\u06A9\u0627\u0631)"
+                            btnSale.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A (\u0628\u062F\u0647\u06A9\u0646\u0627\u0631)"
                             btnSale.visibility = View.VISIBLE
                             btnPayment.visibility = View.GONE
                         } else {
@@ -716,9 +745,9 @@ class MainActivity : AppCompatActivity() {
 
         btnPayment.setOnClickListener {
             val desc = edtDesc.text.toString().trim()
-            val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
+            val amount = edtAmount.text.toString().toLongOrNull() ?:, 0L
             if (amount <= 0) {
-                Toast.makeText(this, "\u0645\u0628\u0644\u063A \u0645\u0639\u062A\u0628\u0631 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "\u0645\u0628\u0644\u063A \u0645\u0639\u062A\u0628\u0631 \u0648\u0627\u0631\u062F \u06ACC\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             val finalDesc = if (desc.isEmpty()) "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647" else desc
