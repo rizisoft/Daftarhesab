@@ -9,6 +9,8 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.view.Gravity
+import android.view.Menu
+import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,7 +24,13 @@ import kotlin.math.abs
 
 class MainActivity : AppCompatActivity() {
 
-    data class Customer(val id: Long, var name: String)
+    data class Customer(
+        val id: Long,
+        var name: String,
+        var phone: String = "",
+        var address: String = ""
+    )
+
     data class Entry(
         val id: Long,
         val customerId: Long,
@@ -44,6 +52,8 @@ class MainActivity : AppCompatActivity() {
                 custArray.put(JSONObject().apply {
                     put("id", c.id)
                     put("name", c.name)
+                    put("phone", c.phone)
+                    put("address", c.address)
                 })
             }
             root.put("customers", custArray)
@@ -125,7 +135,6 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private var editCustId: Long? = null
     private var backPressedTime: Long = 0L
 
     private val restoreLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -163,6 +172,35 @@ class MainActivity : AppCompatActivity() {
         renderHome()
     }
 
+    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
+        menu?.add(0, 1, 0, "ذخیره پشتیبان")
+        menu?.add(0, 2, 1, "بازیابی پشتیبان")
+        return true
+    }
+
+    override fun onOptionsItemSelected(item: MenuItem): Boolean {
+        when (item.itemId) {
+            1 -> {
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_TITLE, "daftar_hesab_backup.json")
+                }
+                manualBackupLauncher.launch(intent)
+                return true
+            }
+            2 -> {
+                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "*/*"
+                }
+                restoreLauncher.launch(intent)
+                return true
+            }
+        }
+        return super.onOptionsItemSelected(item)
+    }
+
     override fun onBackPressed() {
         if (backPressedTime + 2000 > System.currentTimeMillis()) {
             super.onBackPressed()
@@ -181,7 +219,14 @@ class MainActivity : AppCompatActivity() {
             customers.clear()
             for (i in 0 until custArray.length()) {
                 val obj = custArray.getJSONObject(i)
-                customers.add(Customer(obj.getLong("id"), obj.getString("name")))
+                customers.add(
+                    Customer(
+                        obj.getLong("id"),
+                        obj.optString("name", ""),
+                        obj.optString("phone", ""),
+                        obj.optString("address", "")
+                    )
+                )
             }
 
             val entryArray = root.getJSONArray("entries")
@@ -212,7 +257,7 @@ class MainActivity : AppCompatActivity() {
             val newCusts = mutableListOf<Customer>()
             for (i in 0 until custArray.length()) {
                 val obj = custArray.getJSONObject(i)
-                newCusts.add(Customer(obj.getLong("id"), obj.getString("name")))
+                newCusts.add(Customer(obj.getLong("id"), obj.getString("name"), obj.optString("phone", ""), obj.optString("address", "")))
             }
             val entryArray = root.getJSONArray("entries")
             val newEntries = mutableListOf<Entry>()
@@ -240,6 +285,75 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    private fun showCustomerDialog(existingCustomer: Customer? = null) {
+        val dialogLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(48, 32, 48, 32)
+            layoutDirection = View.LAYOUT_DIRECTION_RTL
+        }
+
+        val edtName = EditText(this).apply {
+            hint = "نام و نام خانوادگی (اجباری)"
+            setText(existingCustomer?.name ?: "")
+            setPadding(28, 24, 28, 24)
+            background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = 16
+            }
+        }
+        dialogLayout.addView(edtName)
+
+        val edtPhone = EditText(this).apply {
+            hint = "شماره تماس (اختیاری)"
+            setText(existingCustomer?.phone ?: "")
+            inputType = android.text.InputType.TYPE_CLASS_PHONE
+            setPadding(28, 24, 28, 24)
+            background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = 16
+            }
+        }
+        dialogLayout.addView(edtPhone)
+
+        val edtAddress = EditText(this).apply {
+            hint = "آدرس (اختیاری)"
+            setText(existingCustomer?.address ?: "")
+            setPadding(28, 24, 28, 24)
+            background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+        }
+        dialogLayout.addView(edtAddress)
+
+        val titleText = if (existingCustomer == null) "افزودن مشتری جدید" else "ویرایش مشخصات مشتری"
+
+        AlertDialog.Builder(this)
+            .setTitle(titleText)
+            .setView(dialogLayout)
+            .setPositiveButton("ذخیره") { _, _ ->
+                val name = edtName.text.toString().trim()
+                val phone = edtPhone.text.toString().trim()
+                val address = edtAddress.text.toString().trim()
+
+                if (name.isEmpty()) {
+                    Toast.makeText(this, "وارد کردن نام و نام خانوادگی اجباری است", Toast.LENGTH_SHORT).show()
+                    return@setPositiveButton
+                }
+
+                if (existingCustomer == null) {
+                    customers.add(Customer(System.currentTimeMillis(), name, phone, address))
+                } else {
+                    existingCustomer.name = name
+                    existingCustomer.phone = phone
+                    existingCustomer.address = address
+                }
+
+                saveData(this)
+                renderHome()
+            }
+            .setNegativeButton("لغو", null)
+            .show()
+    }
+
     private fun renderHome() {
         val rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
@@ -248,92 +362,19 @@ class MainActivity : AppCompatActivity() {
             layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
 
-        val tvTitle = TextView(this).apply {
-            text = "📔 دفتر حساب من"
-            textSize = 21f
-            setTextColor(Color.parseColor("#176B5B"))
-            gravity = Gravity.CENTER
-            setTypeface(null, Typeface.BOLD)
-            setPadding(0, 8, 0, 24)
-        }
-        rootLayout.addView(tvTitle)
-
-        val edtCustName = EditText(this).apply {
-            hint = "نام مشتری جدید"
-            setPadding(28, 24, 28, 24)
-            background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
-        }
-        rootLayout.addView(edtCustName)
-
         val btnAddCust = Button(this).apply {
             text = "+ افزودن مشتری جدید"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 16
+                bottomMargin = 20
+            }
+            setOnClickListener {
+                showCustomerDialog(null)
             }
         }
         rootLayout.addView(btnAddCust)
-
-        val btnCancelEdit = Button(this).apply {
-            text = "لغو ویرایش"
-            background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
-            setTextColor(Color.WHITE)
-            visibility = if (editCustId != null) View.VISIBLE else View.GONE
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 12
-            }
-        }
-        rootLayout.addView(btnCancelEdit)
-        if (editCustId != null) {
-            val c = customers.find { it.id == editCustId }
-            if (c != null) edtCustName.setText(c.name)
-            btnAddCust.text = "ذخیره تغییرات مشتری"
-        }
-
-        val backupRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            weightSum = 2f
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                topMargin = 20
-                bottomMargin = 12
-            }
-        }
-
-        val btnBackup = Button(this).apply {
-            text = "ذخیره پشتیبان"
-            textSize = 12f
-            background = makeRoundedCard(Color.parseColor("#2C5282"), Color.parseColor("#2C5282"), 0, 16f)
-            setTextColor(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { marginEnd = 8 }
-            setOnClickListener {
-                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_TITLE, "daftar_hesab_backup.json")
-                }
-                manualBackupLauncher.launch(intent)
-            }
-        }
-
-        val btnRestore = Button(this).apply {
-            text = "بازیابی پشتیبان"
-            textSize = 12f
-            background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
-            setTextColor(Color.WHITE)
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {marginStart = 8}
-            setOnClickListener {
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
-                }
-                restoreLauncher.launch(intent)
-            }
-        }
-        backupRow.addView(btnBackup)
-        backupRow.addView(btnRestore)
-        rootLayout.addView(backupRow)
 
         val scroll = ScrollView(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.MATCH_PARENT)
@@ -378,23 +419,13 @@ class MainActivity : AppCompatActivity() {
                         startActivity(intent)
                     }
                     setOnLongClickListener {
-                        val options = arrayOf("ویرایش نام مشتری", "حذف مشتری")
+                        val options = arrayOf("ویرایش مشخصات مشتری", "حذف مشتری")
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle("مدیریت مشتری: ${c.name}")
                             .setItems(options) { _, which ->
                                 when (which) {
                                     0 -> {
-                                        AlertDialog.Builder(this@MainActivity)
-                                            .setTitle("ویرایش نام مشتری")
-                                            .setMessage("آیا برای ویرایش این مشتری مطمئن هستید؟")
-                                            .setPositiveButton("بله") { _, _ ->
-                                                editCustId = c.id
-                                                edtCustName.setText(c.name)
-                                                btnAddCust.text = "ذخیره تغییرات مشتری"
-                                                btnCancelEdit.visibility = View.VISIBLE
-                                            }
-                                            .setNegativeButton("خیر", null)
-                                            .show()
+                                        showCustomerDialog(c)
                                     }
                                     1 -> {
                                         AlertDialog.Builder(this@MainActivity)
@@ -428,13 +459,14 @@ class MainActivity : AppCompatActivity() {
                     setTypeface(null, Typeface.BOLD)
                 }
 
+                val infoSubText = if (c.phone.isNotEmpty()) "${c.phone}  |  " else ""
                 val tvBalance = TextView(this).apply {
                     text = when {
-                        balance > 0 -> String.format(Locale.US, "بدهکار: %,d تومان", balance)
-                        balance < 0 -> String.format(Locale.US, "طلبکار: %,d تومان", abs(balance))
-                        else -> "تسویه"
+                        balance > 0 -> String.format(Locale.US, "$infoSubText بدهکار: %,d تومان", balance)
+                        balance < 0 -> String.format(Locale.US, "$infoSubText طلبکار: %,d تومان", abs(balance))
+                        else -> "${infoSubText}تسویه"
                     }
-                    textSize = 14f
+                    textSize = 13f
                     setTextColor(if (balance > 0) Color.parseColor("#B23A48") else Color.parseColor("#176B5B"))
                     setPadding(0, 6, 0, 0)
                 }
@@ -444,34 +476,6 @@ class MainActivity : AppCompatActivity() {
                 card.addView(infoLayout)
                 listLayout.addView(card)
             }
-        }
-
-        btnAddCust.setOnClickListener {
-            val name = edtCustName.text.toString().trim()
-            if (name.isEmpty()) {
-                Toast.makeText(this, "نام مشتری را وارد کنید", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-
-            if (editCustId != null) {
-                customers.find { c -> c.id == editCustId }?.name = name
-                editCustId = null
-                btnAddCust.text = "+ افزودن مشتری جدید"
-                btnCancelEdit.visibility = View.GONE
-            } else {
-                customers.add(Customer(System.currentTimeMillis(), name))
-            }
-
-            edtCustName.text.clear()
-            saveData(this)
-            refreshListUI()
-        }
-
-        btnCancelEdit.setOnClickListener {
-            editCustId = null
-            edtCustName.text.clear()
-            btnAddCust.text = "+ افزودن مشتری جدید"
-            btnCancelEdit.visibility = View.GONE
         }
 
         setContentView(rootLayout)
