@@ -72,14 +72,12 @@ class MainActivity : AppCompatActivity() {
         loadData()
         renderHome()
 
-        // مدیریت یکپارچه و دقیق کلید Back
+        // مدیریت هوشمند کلید Back (در حساب مشتری برمی‌گرداند، در صفحه اصلی با دو بار کلیک خارج می‌کند)
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (activeCustId != null) {
-                    // اگر در صفحه حساب مشتری هستیم، برگردیم به صفحه اصلی
                     renderHome()
                 } else {
-                    // اگر در صفحه اصلی هستیم، با دو بار زدن در بازه ۲ ثانیه خارج شویم
                     if (backPressedTime + 2000 > System.currentTimeMillis()) {
                         isEnabled = false
                         onBackPressedDispatcher.onBackPressed()
@@ -404,44 +402,6 @@ class MainActivity : AppCompatActivity() {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                         topMargin = 14
                     }
-                    // باز کردن منوی مدیریت با نگه‌داشتن انگشت روی کارت
-                    setOnLongClickListener {
-                        val options = arrayOf("ویرایش نام مشتری", "حذف مشتری")
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle("مدیریت مشتری: ${c.name}")
-                            .setItems(options) { _, which ->
-                                when (which) {
-                                    0 -> {
-                                        AlertDialog.Builder(this@MainActivity)
-                                            .setTitle("ویرایش نام مشتری")
-                                            .setMessage("آیا برای ویرایش این مشتری مطمئن هستید؟")
-                                            .setPositiveButton("بله") { _, _ ->
-                                                editCustId = c.id
-                                                edtCustName.setText(c.name)
-                                                btnAddCust.text = "ذخیره تغییرات مشتری"
-                                                btnCancelEdit.visibility = View.VISIBLE
-                                            }
-                                            .setNegativeButton("خیر", null)
-                                            .show()
-                                    }
-                                    1 -> {
-                                        AlertDialog.Builder(this@MainActivity)
-                                            .setTitle("حذف مشتری")
-                                            .setMessage("آیا برای حذف '${c.name}' و تمام تراکنش‌های او مطمئن هستید؟")
-                                            .setPositiveButton("بله") { _, _ ->
-                                                customers.remove(c)
-                                                entries.removeAll { it.customerId == c.id }
-                                                saveData()
-                                                refreshList()
-                                            }
-                                            .setNegativeButton("خیر", null)
-                                            .show()
-                                    }
-                                }
-                            }
-                            .show()
-                        true
-                    }
                 }
 
                 val infoLayout = LinearLayout(this).apply {
@@ -471,6 +431,51 @@ class MainActivity : AppCompatActivity() {
                 infoLayout.addView(tvName)
                 infoLayout.addView(tvBalance)
                 card.addView(infoLayout)
+
+                // فعال‌سازی قطعی لمس طولانی روی کل کارت و اجزای داخلی آن
+                val showLongClickMenu = View.OnLongClickListener {
+                    val options = arrayOf("ویرایش نام مشتری", "حذف مشتری")
+                    AlertDialog.Builder(this@MainActivity)
+                        .setTitle("مدیریت مشتری: ${c.name}")
+                        .setItems(options) { _, which ->
+                            when (which) {
+                                0 -> {
+                                    AlertDialog.Builder(this@MainActivity)
+                                        .setTitle("ویرایش نام مشتری")
+                                        .setMessage("آیا برای ویرایش این مشتری مطمئن هستید؟")
+                                        .setPositiveButton("بله") { _, _ ->
+                                            editCustId = c.id
+                                            edtCustName.setText(c.name)
+                                            btnAddCust.text = "ذخیره تغییرات مشتری"
+                                            btnCancelEdit.visibility = View.VISIBLE
+                                        }
+                                        .setNegativeButton("خیر", null)
+                                        .show()
+                                }
+                                1 -> {
+                                    AlertDialog.Builder(this@MainActivity)
+                                        .setTitle("حذف مشتری")
+                                        .setMessage("آیا برای حذف '${c.name}' و تمام تراکنش‌های او مطمئن هستید؟")
+                                        .setPositiveButton("بله") { _, _ ->
+                                            customers.remove(c)
+                                            entries.removeAll { it.customerId == c.id }
+                                            saveData()
+                                            refreshList()
+                                        }
+                                        .setNegativeButton("خیر", null)
+                                        .show()
+                                }
+                            }
+                        }
+                        .show()
+                    true
+                }
+
+                card.setOnLongClickListener(showLongClickMenu)
+                infoLayout.setOnLongClickListener(showLongClickMenu)
+                tvName.setOnLongClickListener(showLongClickMenu)
+                tvBalance.setOnLongClickListener(showLongClickMenu)
+
                 listLayout.addView(card)
             }
         }
