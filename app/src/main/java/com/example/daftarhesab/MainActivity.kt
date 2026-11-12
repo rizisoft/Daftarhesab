@@ -71,14 +71,11 @@ class MainActivity : AppCompatActivity() {
         loadData()
         renderHome()
 
-        // مدیریت همیشگی و پایدار کلید Back
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (activeCustId != null) {
-                    // اگر داخل حساب مشتری هستیم، بدون خروج از برنامه برگردیم به صفحه اصلی
                     renderHome()
                 } else {
-                    // اگر در صفحه اصلی هستیم، اجازه بسته شدن برنامه صادر شود
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                 }
@@ -122,48 +119,62 @@ class MainActivity : AppCompatActivity() {
         autoBackupAllStorages()
     }
 
+    private fun cleanOldBackups(directory: File) {
+        try {
+            if (!directory.exists() || !directory.isDirectory) return
+            val files = directory.listFiles() ?: return
+            val now = System.currentTimeMillis()
+            val thirtyDaysInMillis = 30L * 24L * 60L * 60L * 1000L
+
+            for (file in files) {
+                if (file.isFile && file.name.startsWith("DaftarHesab_") && file.name.endsWith(".json")) {
+                    val lastModified = file.lastModified()
+                    if (now - lastModified > thirtyDaysInMillis) {
+                        file.delete()
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     private fun autoBackupAllStorages() {
         val jsonContent = buildJsonString()
-        
-        // 1. ذخیره در پوشه عمومی Documents حافظه داخلی
+        val dateStr = getJalaliDate().replace("/", "-")
+        val fileName = "DaftarHesab_$dateStr.json"
+
+        // 1. ذخیره در پوشه عمومی Documents/DaftarHesab حافظه داخلی + پاکسازی فایل‌های بالای یک ماه
         try {
             val publicDocDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
             val targetDir = File(publicDocDir, "DaftarHesab")
             if (!targetDir.exists()) targetDir.mkdirs()
-            File(targetDir, "DaftarHesab_AutoBackup.json").writeText(jsonContent, Charsets.UTF_8)
+            
+            // ذخیره فایل جدید با نام تاریخ روز (اگر از قبل در این روز فایلی باشد به‌روز می‌شود، ولی روزهای دیگر دست‌نخورده می‌مانند)
+            File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
+            cleanOldBackups(targetDir)
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        // 2. ذخیره در پوشه ساده و در دسترس کارت حافظه (SD Card)
+        // 2. ذخیره در کارت حافظه (SD Card) در پوشه Documents/DaftarHesab + پاکسازی فایل‌های بالای یک ماه
         try {
             val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
             if (externalDirs != null && externalDirs.size > 1) {
                 for (i in 1 until externalDirs.size) {
                     val sdDir = externalDirs[i]
                     if (sdDir != null && Environment.getExternalStorageState(sdDir) == Environment.MEDIA_MOUNTED) {
-                        // رفتن به پوشه Documents در ریشه مموری کارت یا مسیر عمومی مموری
                         val rootSd = sdDir.absolutePath.substringBefore("/Android")
                         val simpleSdFolder = File(rootSd, "Documents/DaftarHesab")
                         if (!simpleSdFolder.exists()) simpleSdFolder.mkdirs()
-                        File(simpleSdFolder, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
+                        
+                        File(simpleSdFolder, fileName).writeText(jsonContent, Charsets.UTF_8)
+                        cleanOldBackups(simpleSdFolder)
                     }
                 }
             }
         } catch (e: Exception) {
-            // در صورت عدم دسترسی به مسیر عمومی مموری، روی مسیر امن مموری ذخیره شود
-            try {
-                val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
-                if (externalDirs != null && externalDirs.size > 1) {
-                    val sdDir = externalDirs[1]
-                    if (sdDir != null) {
-                        if (!sdDir.exists()) sdDir.mkdirs()
-                        File(sdDir, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
-                    }
-                }
-            } catch (ex: Exception) {
-                ex.printStackTrace()
-            }
+            e.printStackTrace()
         }
     }
 
@@ -783,10 +794,4 @@ class MainActivity : AppCompatActivity() {
             }
             resetEntryForm()
             saveData()
-            updateLedgerUI()
-        }
-
-        setContentView(rootLayout)
-        updateLedgerUI()
-    }
-}
+            update
