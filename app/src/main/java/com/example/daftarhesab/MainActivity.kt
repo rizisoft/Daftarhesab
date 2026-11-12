@@ -71,14 +71,14 @@ class MainActivity : AppCompatActivity() {
         loadData()
         renderHome()
 
-        // مدیریت دکمه Back برای جلوگیری از خروج ناخواسته و بازگشت به صفحه قبل
+        // مدیریت همیشگی و پایدار کلید Back
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (activeCustId != null) {
-                    // اگر داخل حساب مشتری هستیم، برگردیم به صفحه اصلی
+                    // اگر داخل حساب مشتری هستیم، بدون خروج از برنامه برگردیم به صفحه اصلی
                     renderHome()
                 } else {
-                    // اگر در صفحه اصلی هستیم، اجازه دهیم برنامه بسته شود
+                    // اگر در صفحه اصلی هستیم، اجازه بسته شدن برنامه صادر شود
                     isEnabled = false
                     onBackPressedDispatcher.onBackPressed()
                 }
@@ -135,31 +135,35 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
-        // 2. ذخیره در حافظه داخلی اختصاصی برنامه (Documents)
-        try {
-            val internalDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: filesDir
-            if (!internalDir.exists()) internalDir.mkdirs()
-            File(internalDir, "DaftarHesab_AutoBackup.json").writeText(jsonContent, Charsets.UTF_8)
-        } catch (e: Exception) {
-            e.printStackTrace()
-        }
-
-        // 3. ذخیره روی کارت حافظه SD (در صورت وجود کارت حافظه جانبی فعال)
+        // 2. ذخیره در پوشه ساده و در دسترس کارت حافظه (SD Card)
         try {
             val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
             if (externalDirs != null && externalDirs.size > 1) {
                 for (i in 1 until externalDirs.size) {
                     val sdDir = externalDirs[i]
                     if (sdDir != null && Environment.getExternalStorageState(sdDir) == Environment.MEDIA_MOUNTED) {
-                        // مسیر دقیق پوشه اندروید مموری کارت برای جلوگیری از خطای دسترسی
-                        val appSdDir = File(sdDir.absolutePath, "DaftarHesab")
-                        if (!appSdDir.exists()) appSdDir.mkdirs()
-                        File(appSdDir, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
+                        // رفتن به پوشه Documents در ریشه مموری کارت یا مسیر عمومی مموری
+                        val rootSd = sdDir.absolutePath.substringBefore("/Android")
+                        val simpleSdFolder = File(rootSd, "Documents/DaftarHesab")
+                        if (!simpleSdFolder.exists()) simpleSdFolder.mkdirs()
+                        File(simpleSdFolder, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
                     }
                 }
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+            // در صورت عدم دسترسی به مسیر عمومی مموری، روی مسیر امن مموری ذخیره شود
+            try {
+                val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
+                if (externalDirs != null && externalDirs.size > 1) {
+                    val sdDir = externalDirs[1]
+                    if (sdDir != null) {
+                        if (!sdDir.exists()) sdDir.mkdirs()
+                        File(sdDir, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
+                    }
+                }
+            } catch (ex: Exception) {
+                ex.printStackTrace()
+            }
         }
     }
 
