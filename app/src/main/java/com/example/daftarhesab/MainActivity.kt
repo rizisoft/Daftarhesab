@@ -72,14 +72,11 @@ class MainActivity : AppCompatActivity() {
         loadData()
         renderHome()
 
-        // مدیریت دقیق کلید Back بدون خروج ناخواسته و خروج با دوبار کلیک در صفحه اصلی
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (activeCustId != null) {
-                    // اگر داخل حساب مشتری هستیم، برگردیم به صفحه اصلی
                     renderHome()
                 } else {
-                    // اگر در صفحه اصلی هستیم، با دو بار زدن در بازه ۲ ثانیه خارج شویم
                     if (backPressedTime + 2000 > System.currentTimeMillis()) {
                         isEnabled = false
                         onBackPressedDispatcher.onBackPressed()
@@ -403,14 +400,13 @@ class MainActivity : AppCompatActivity() {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                         topMargin = 14
                     }
-                    // نگه‌داشتن انگشت روی کارت مشتری به مدت ۲ ثانیه برای نمایش منوی ویرایش/حذف
                     setOnLongClickListener {
                         val options = arrayOf("ویرایش نام مشتری", "حذف مشتری")
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle("مدیریت مشتری: ${c.name}")
                             .setItems(options) { _, which ->
                                 when (which) {
-                                    0 -> { // ویرایش
+                                    0 -> {
                                         AlertDialog.Builder(this@MainActivity)
                                             .setTitle("ویرایش نام مشتری")
                                             .setMessage("آیا برای ویرایش این مشتری مطمئن هستید؟")
@@ -423,7 +419,7 @@ class MainActivity : AppCompatActivity() {
                                             .setNegativeButton("خیر", null)
                                             .show()
                                     }
-                                    1 -> { // حذف
+                                    1 -> {
                                         AlertDialog.Builder(this@MainActivity)
                                             .setTitle("حذف مشتری")
                                             .setMessage("آیا برای حذف '${c.name}' و تمام تراکنش‌های او مطمئن هستید؟")
@@ -739,60 +735,3 @@ class MainActivity : AppCompatActivity() {
                             .setPositiveButton("بله") { _, _ ->
                                 entries.remove(e)
                                 resetEntryForm()
-                                saveData()
-                                updateLedgerUI()
-                            }
-                            .setNegativeButton("خیر", null)
-                            .show()
-                    }
-                }
-                card.addView(btnDelEntry)
-                entryListLayout.addView(card)
-            }
-        }
-
-        btnSale.setOnClickListener {
-            val desc = edtDesc.text.toString().trim()
-            val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
-            if (amount <= 0 || desc.isEmpty()) {
-                Toast.makeText(this, "نام کالا و مبلغ معتبر وارد کنید", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            if (editEntryId != null) {
-                entries.find { it.id == editEntryId }?.apply {
-                    type = "sale"
-                    description = desc
-                    this.amount = amount
-                }
-            } else {
-                entries.add(Entry(System.currentTimeMillis(), custId, "sale", desc, amount, getJalaliDate()))
-            }
-            resetEntryForm()
-            saveData()
-            updateLedgerUI()
-        }
-
-        btnPayment.setOnClickListener {
-            val desc = edtDesc.text.toString().trim()
-            val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
-            if (amount <= 0) {
-                Toast.makeText(this, "مبلغ معتبر وارد کنید", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
-            val finalDesc = if (desc.isEmpty()) "دریافت وجه" else desc
-            if (editEntryId != null) {
-                entries.find { it.id == editEntryId }?.apply {
-                    type, description, this.amount = "payment", finalDesc, amount
-                }
-            } else {
-                entries.add(Entry(System.currentTimeMillis(), custId, "payment", finalDesc, amount, getJalaliDate()))
-            }
-            resetEntryForm()
-            saveData()
-            updateLedgerUI()
-        }
-
-        setContentView(rootLayout)
-        updateLedgerUI()
-    }
-}
