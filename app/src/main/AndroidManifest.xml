@@ -1,13 +1,23 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <!-- مجوزهای دسترسی به حافظه داخلی و کارت حافظه برای پشتیبان‌گیری -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32" />
 
     <application
         android:allowBackup="true"
-        android:icon="@drawable/ic_notebook"
+        android:icon="@mipmap/ic_launcher"
         android:label="دفتر حساب من"
-        android:roundIcon="@drawable/ic_notebook"
+        android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.DaftarHesab">
+        android:requestLegacyExternalStorage="true"
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar">
+
+        <!-- صفحه اول: لیست مشتریان -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -16,6 +26,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- صفحه دوم: جزئیات حساب و تراکنش‌های مشتری -->
+        <activity
+            android:name=".LedgerActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>
