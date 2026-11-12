@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.DaftarHesab" parent="Theme.AppCompat.Light.NoActionBar">
+        <item name="colorPrimary">#176B5B</item>
+        <item name="colorPrimaryDark">#114E42</item>
+        <item name="colorAccent">#176B5B</item>
+    </style>
+</resources>
