@@ -9,8 +9,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Environment
 import android.view.Gravity
-import android.view.Menu
-import android.view.MenuItem
 import android.view.View
 import android.widget.*
 import androidx.activity.result.contract.ActivityResultContracts
@@ -172,35 +170,6 @@ class MainActivity : AppCompatActivity() {
         renderHome()
     }
 
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menu?.add(0, 1, 0, "ذخیره پشتیبان")
-        menu?.add(0, 2, 1, "بازیابی پشتیبان")
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        when (item.itemId) {
-            1 -> {
-                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_TITLE, "daftar_hesab_backup.json")
-                }
-                manualBackupLauncher.launch(intent)
-                return true
-            }
-            2 -> {
-                val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
-                    addCategory(Intent.CATEGORY_OPENABLE)
-                    type = "*/*"
-                }
-                restoreLauncher.launch(intent)
-                return true
-            }
-        }
-        return super.onOptionsItemSelected(item)
-    }
-
     override fun onBackPressed() {
         if (backPressedTime + 2000 > System.currentTimeMillis()) {
             super.onBackPressed()
@@ -355,13 +324,74 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome() {
-        val rootLayout = LinearLayout(this).apply {
+        val rootLayout = LinearLayout(this).applies {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 32, 32, 32)
             setBackgroundColor(Color.parseColor("#F5F7F6"))
             layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
 
+        // نوار بالای صفحه (شامل عنوان و منوی سه نقطه)
+        val topBar = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                bottomMargin = 16
+            }
+        }
+
+        val tvTitle = TextView(this).apply {
+            text = "📔 دفتر حساب من"
+            textSize = 19f
+            setTextColor(Color.parseColor("#176B5B"))
+            setTypeface(null, Typeface.BOLD)
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        val btnMenu = Button(this).apply {
+            text = "⋮"
+            textSize = 22f
+            setBackgroundColor(Color.TRANSPARENT)
+            setTextColor(Color.parseColor("#176B5B"))
+            minWidth = 0
+            minimumWidth = 0
+            setPadding(16, 0, 16, 0)
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
+            setOnClickListener { view ->
+                val popup = PopupMenu(this@MainActivity, view)
+                popup.menu.add(0, 1, 0, "ذخیره پشتیبان")
+                popup.menu.add(0, 2, 1, "بازیابی پشتیبان")
+                popup.setOnMenuItemClickListener { item ->
+                    when (item.itemId) {
+                        1 -> {
+                            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "application/json"
+                                putExtra(Intent.EXTRA_TITLE, "daftar_hesab_backup.json")
+                            }
+                            manualBackupLauncher.launch(intent)
+                            true
+                        }
+                        2 -> {
+                            val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+                                addCategory(Intent.CATEGORY_OPENABLE)
+                                type = "*/*"
+                            }
+                            restoreLauncher.launch(intent)
+                            true
+                        }
+                        else -> false
+                    }
+                }
+                popup.show()
+            }
+        }
+
+        topBar.addView(tvTitle)
+        topBar.addView(btnMenu)
+        rootLayout.addView(topBar)
+
+        // دکمه افزودن مشتری جدید
         val btnAddCust = Button(this).apply {
             text = "+ افزودن مشتری جدید"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
