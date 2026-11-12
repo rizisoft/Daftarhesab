@@ -41,6 +41,7 @@ class MainActivity : AppCompatActivity() {
     private var editEntryId: Long? = null
 
     private lateinit var dbFile: File
+    private var backPressedTime: Long = 0L
 
     private val restoreLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
@@ -71,13 +72,21 @@ class MainActivity : AppCompatActivity() {
         loadData()
         renderHome()
 
+        // مدیریت دقیق کلید Back بدون خروج ناخواسته و خروج با دوبار کلیک در صفحه اصلی
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (activeCustId != null) {
+                    // اگر داخل حساب مشتری هستیم، برگردیم به صفحه اصلی
                     renderHome()
                 } else {
-                    isEnabled = false
-                    onBackPressedDispatcher.onBackPressed()
+                    // اگر در صفحه اصلی هستیم، با دو بار زدن در بازه ۲ ثانیه خارج شویم
+                    if (backPressedTime + 2000 > System.currentTimeMillis()) {
+                        isEnabled = false
+                        onBackPressedDispatcher.onBackPressed()
+                    } else {
+                        Toast.makeText(this@MainActivity, "برای خروج دوباره کلید بازگشت را بزنید", Toast.LENGTH_SHORT).show()
+                        backPressedTime = System.currentTimeMillis()
+                    }
                 }
             }
         })
@@ -394,6 +403,44 @@ class MainActivity : AppCompatActivity() {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                         topMargin = 14
                     }
+                    // نگه‌داشتن انگشت روی کارت مشتری به مدت ۲ ثانیه برای نمایش منوی ویرایش/حذف
+                    setOnLongClickListener {
+                        val options = arrayOf("ویرایش نام مشتری", "حذف مشتری")
+                        AlertDialog.Builder(this@MainActivity)
+                            .setTitle("مدیریت مشتری: ${c.name}")
+                            .setItems(options) { _, which ->
+                                when (which) {
+                                    0 -> { // ویرایش
+                                        AlertDialog.Builder(this@MainActivity)
+                                            .setTitle("ویرایش نام مشتری")
+                                            .setMessage("آیا برای ویرایش این مشتری مطمئن هستید؟")
+                                            .setPositiveButton("بله") { _, _ ->
+                                                editCustId = c.id
+                                                edtCustName.setText(c.name)
+                                                btnAddCust.text = "ذخیره تغییرات مشتری"
+                                                btnCancelEdit.visibility = View.VISIBLE
+                                            }
+                                            .setNegativeButton("خیر", null)
+                                            .show()
+                                    }
+                                    1 -> { // حذف
+                                        AlertDialog.Builder(this@MainActivity)
+                                            .setTitle("حذف مشتری")
+                                            .setMessage("آیا برای حذف '${c.name}' و تمام تراکنش‌های او مطمئن هستید؟")
+                                            .setPositiveButton("بله") { _, _ ->
+                                                customers.remove(c)
+                                                entries.removeAll { it.customerId == c.id }
+                                                saveData()
+                                                refreshList()
+                                            }
+                                            .setNegativeButton("خیر", null)
+                                            .show()
+                                    }
+                                }
+                            }
+                            .show()
+                        true
+                    }
                 }
 
                 val infoLayout = LinearLayout(this).apply {
@@ -423,51 +470,6 @@ class MainActivity : AppCompatActivity() {
                 infoLayout.addView(tvName)
                 infoLayout.addView(tvBalance)
                 card.addView(infoLayout)
-
-                val btnEdit = Button(this).apply {
-                    text = "ویرایش"
-                    textSize = 11f
-                    background = makeRoundedCard(Color.parseColor("#D69E2E"), Color.parseColor("#D69E2E"), 0, 12f)
-                    setTextColor(Color.WHITE)
-                    minHeight = 0
-                    minimumHeight = 0
-                    setPadding(20, 12, 20, 12)
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
-                        marginEnd = 8
-                    }
-                    setOnClickListener {
-                        editCustId = c.id
-                        edtCustName.setText(c.name)
-                        btnAddCust.text = "ذخیره تغییرات مشتری"
-                        btnCancelEdit.visibility = View.VISIBLE
-                    }
-                }
-                card.addView(btnEdit)
-
-                val btnDel = Button(this).apply {
-                    text = "حذف"
-                    textSize = 11f
-                    background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 12f)
-                    setTextColor(Color.WHITE)
-                    minHeight = 0
-                    minimumHeight = 0
-                    setPadding(20, 12, 20, 12)
-                    layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
-                    setOnClickListener {
-                        AlertDialog.Builder(this@MainActivity)
-                            .setTitle("حذف مشتری")
-                            .setMessage("تمام تراکنش‌های این مشتری نیز حذف خواهند شد. ادامه می‌دهید؟")
-                            .setPositiveButton("بله") { _, _ ->
-                                customers.remove(c)
-                                entries.removeAll { it.customerId == c.id }
-                                saveData()
-                                refreshList()
-                            }
-                            .setNegativeButton("خیر", null)
-                            .show()
-                    }
-                }
-                card.addView(btnDel)
                 listLayout.addView(card)
             }
         }
@@ -733,7 +735,7 @@ class MainActivity : AppCompatActivity() {
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
                             .setTitle("حذف تراکنش")
-                            .setMessage("این تراکنش حذف شود؟")
+                            .setMessage("آیا از حذف این تراکنش مطمئن هستید؟")
                             .setPositiveButton("بله") { _, _ ->
                                 entries.remove(e)
                                 resetEntryForm()
@@ -780,9 +782,7 @@ class MainActivity : AppCompatActivity() {
             val finalDesc = if (desc.isEmpty()) "دریافت وجه" else desc
             if (editEntryId != null) {
                 entries.find { it.id == editEntryId }?.apply {
-                    type = "payment"
-                    description = finalDesc
-                    this.amount = amount
+                    type, description, this.amount = "payment", finalDesc, amount
                 }
             } else {
                 entries.add(Entry(System.currentTimeMillis(), custId, "payment", finalDesc, amount, getJalaliDate()))
