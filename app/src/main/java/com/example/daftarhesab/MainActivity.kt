@@ -18,7 +18,6 @@ import androidx.appcompat.app.AppCompatActivity
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
-import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.abs
 
@@ -57,9 +56,9 @@ class MainActivity : AppCompatActivity() {
                     contentResolver.openOutputStream(uri)?.use { out ->
                         out.write(buildJsonString().toByteArray(Charsets.UTF_8))
                     }
-                    Toast.makeText(this, "賮丕蹖賱 倬卮鬲蹖亘丕賳 匕禺蹖乇賴 卮丿", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "\u0641\u0627\u06CC\u0644 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0630\u062E\u06CC\u0631\u0647 \u0634\u062F", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this, "禺胤丕 丿乇 匕禺蹖乇賴 倬卮鬲蹖亘丕賳", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "\u062E\u0637\u0627 \u062F\u0631 \u0630\u062E\u06CC\u0631\u0647 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -74,7 +73,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        autoBackupToDownloads()
+        autoBackupToDocuments()
     }
 
     private fun buildJsonString(): String {
@@ -104,15 +103,15 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveData() {
-        dbFile.writeText(buildJsonString())
+        dbFile.writeText(buildJsonString(), Charsets.UTF_8)
     }
 
-    private fun autoBackupToDownloads() {
+    private fun autoBackupToDocuments() {
         try {
             val backupDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: filesDir
             if (!backupDir.exists()) backupDir.mkdirs()
             val backupFile = File(backupDir, "DaftarHesab_AutoBackup.json")
-            backupFile.writeText(buildJsonString())
+            backupFile.writeText(buildJsonString(), Charsets.UTF_8)
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -120,7 +119,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun loadData() {
         if (!dbFile.exists()) return
-        parseJsonAndLoad(dbFile.readText())
+        parseJsonAndLoad(dbFile.readText(Charsets.UTF_8))
     }
 
     private fun parseJsonAndLoad(jsonText: String): Boolean {
@@ -161,16 +160,16 @@ class MainActivity : AppCompatActivity() {
 
     private fun restoreFromUri(uri: Uri) {
         try {
-            val text = contentResolver.openInputStream(uri)?.bufferedReader()?.use { it.readText() } ?: return
+            val text = contentResolver.openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() } ?: return
             if (parseJsonAndLoad(text)) {
                 saveData()
                 renderHome()
-                Toast.makeText(this, "丕胤賱丕毓丕鬲 亘丕 賲賵賮賯蹖鬲 亘丕夭蹖丕亘蹖 卮丿!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "\u0627\u0637\u0644\u0627\u0639\u0627\u062A \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0628\u0627\u0632\u06CC\u0627\u0628\u06CC \u0634\u062F!", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "賮丕蹖賱 倬卮鬲蹖亘丕賳 賲毓鬲亘乇 賳蹖爻鬲", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "\u0641\u0627\u06CC\u0644 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646 \u0645\u0639\u062A\u0628\u0631 \u0646\u06CC\u0633\u062A", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "禺胤丕 丿乇 禺賵丕賳丿賳 賮丕蹖賱", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "\u062E\u0637\u0627 \u062F\u0631 \u062E\u0648\u0627\u0646\u062F\u0646 \u0641\u0627\u06CC\u0644", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -219,7 +218,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val tvTitle = TextView(this).apply {
-            text = "馃摂 丿賮鬲乇 丨爻丕亘 賲賳"
+            text = "\uD83D\uDCD4 \u062F\u0641\u062A\u0631 \u062D\u0633\u0627\u0628 \u0645\u0646"
             textSize = 21f
             setTextColor(Color.parseColor("#176B5B"))
             gravity = Gravity.CENTER
@@ -229,14 +228,14 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(tvTitle)
 
         val edtCustName = EditText(this).apply {
-            hint = "賳丕賲 賲卮鬲乇蹖 噩丿蹖丿"
+            hint = "\u0646\u0627\u0645 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
             setPadding(28, 24, 28, 24)
             background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
         }
         rootLayout.addView(edtCustName)
 
         val btnAddCust = Button(this).apply {
-            text = "+ 丕賮夭賵丿賳 賲卮鬲乇蹖 噩丿蹖丿"
+            text = "+ \u0627\u0641\u0632\u0648\u062F\u0646 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
@@ -247,7 +246,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(btnAddCust)
 
         val btnCancelEdit = Button(this).apply {
-            text = "賱睾賵 賵蹖乇丕蹖卮"
+            text = "\u0644\u063A\u0648 \u0648\u06CC\u0631\u0627\u06CC\u0634"
             background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
             setTextColor(Color.WHITE)
             visibility = View.GONE
@@ -257,7 +256,6 @@ class MainActivity : AppCompatActivity() {
         }
         rootLayout.addView(btnCancelEdit)
 
-        // Backup & Restore row
         val backupRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             weightSum = 2f
@@ -268,7 +266,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnBackup = Button(this).apply {
-            text = "匕禺蹖乇賴 倬卮鬲蹖亘丕賳"
+            text = "\u0630\u062E\u06CC\u0631\u0647 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646"
             textSize = 12f
             background = makeRoundedCard(Color.parseColor("#2C5282"), Color.parseColor("#2C5282"), 0, 16f)
             setTextColor(Color.WHITE)
@@ -286,7 +284,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnRestore = Button(this).apply {
-            text = "亘丕夭蹖丕亘蹖 倬卮鬲蹖亘丕賳"
+            text = "\u0628\u0627\u0632\u06CC\u0627\u0628\u06CC \u067E\u0634\u062A\u06CC\u0628\u0627\u0646"
             textSize = 12f
             background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
             setTextColor(Color.WHITE)
@@ -319,7 +317,7 @@ class MainActivity : AppCompatActivity() {
             listLayout.removeAllViews()
             if (customers.isEmpty()) {
                 val tv = TextView(this).apply {
-                    text = "賴賳賵夭 賲卮鬲乇蹖鈥屫й� 孬亘鬲 賳卮丿賴 丕爻鬲."
+                    text = "\u0647\u0646\u0648\u0632 \u0645\u0634\u062A\u0631\u06CC\u200C\u0627\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A."
                     gravity = Gravity.CENTER
                     setPadding(0, 60, 0, 0)
                     setTextColor(Color.parseColor("#66736F"))
@@ -357,9 +355,9 @@ class MainActivity : AppCompatActivity() {
 
                 val tvBalance = TextView(this).apply {
                     text = when {
-                        balance > 0 -> "亘丿賴讴丕乇: %,d 鬲賵賲丕賳".format(balance)
-                        balance < 0 -> "胤賱亘讴丕乇: %,d 鬲賵賲丕賳".format(abs(balance))
-                        else -> "鬲爻賵蹖賴"
+                        balance > 0 -> String.format(Locale.US, "\u0628\u062F\u0647\u06A9\u0627\u0631: %,d \u062A\u0648\u0645\u0627\u0646", balance)
+                        balance < 0 -> String.format(Locale.US, "\u0637\u0644\u0628\u06A9\u0627\u0631: %,d \u062A\u0648\u0645\u0627\u0646", abs(balance))
+                        else -> "\u062A\u0633\u0648\u06CC\u0647"
                     }
                     textSize = 14f
                     setTextColor(if (balance > 0) Color.parseColor("#B23A48") else Color.parseColor("#176B5B"))
@@ -371,7 +369,7 @@ class MainActivity : AppCompatActivity() {
                 card.addView(infoLayout)
 
                 val btnEdit = Button(this).apply {
-                    text = "賵蹖乇丕蹖卮"
+                    text = "\u0648\u06CC\u0631\u0627\u06CC\u0634"
                     textSize = 11f
                     background = makeRoundedCard(Color.parseColor("#D69E2E"), Color.parseColor("#D69E2E"), 0, 12f)
                     setTextColor(Color.WHITE)
@@ -384,14 +382,14 @@ class MainActivity : AppCompatActivity() {
                     setOnClickListener {
                         editCustId = c.id
                         edtCustName.setText(c.name)
-                        btnAddCust.text = "匕禺蹖乇賴 鬲睾蹖蹖乇丕鬲 賲卮鬲乇蹖"
+                        btnAddCust.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A \u0645\u0634\u062A\u0631\u06CC"
                         btnCancelEdit.visibility = View.VISIBLE
                     }
                 }
                 card.addView(btnEdit)
 
                 val btnDel = Button(this).apply {
-                    text = "丨匕賮"
+                    text = "\u062D\u0630\u0641"
                     textSize = 11f
                     background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 12f)
                     setTextColor(Color.WHITE)
@@ -401,15 +399,15 @@ class MainActivity : AppCompatActivity() {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
-                            .setTitle("丨匕賮 賲卮鬲乇蹖")
-                            .setMessage("鬲賲丕賲 鬲乇丕讴賳卮鈥屬囏й� 丕蹖賳 賲卮鬲乇蹖 賳蹖夭 丨匕賮 禺賵丕賴賳丿 卮丿. 丕丿丕賲賴 賲蹖鈥屫囒屫�")
-                            .setPositiveButton("亘賱賴") { _, _ ->
+                            .setTitle("\u062D\u0630\u0641 \u0645\u0634\u062A\u0631\u06CC")
+                            .setMessage("\u062A\u0645\u0627\u0645 \u062A\u0631\u0627\u06A9\u0646\u0634\u200C\u0647\u0627\u06CC \u0627\u06CC\u0646 \u0645\u0634\u062A\u0631\u06CC \u0646\u06CC\u0632 \u062D\u0630\u0641 \u062E\u0648\u0627\u0647\u0646\u062F \u0634\u062F. \u0627\u062F\u0627\u0645\u0647 \u0645\u06CC\u200C\u062F\u0647\u06CC\u062F\u061F")
+                            .setPositiveButton("\u0628\u0644\u0647") { _, _ ->
                                 customers.remove(c)
                                 entries.removeAll { it.customerId == c.id }
                                 saveData()
                                 refreshList()
                             }
-                            .setNegativeButton("禺蹖乇", null)
+                            .setNegativeButton("\u062E\u06CC\u0631", null)
                             .show()
                     }
                 }
@@ -421,14 +419,14 @@ class MainActivity : AppCompatActivity() {
         btnAddCust.setOnClickListener {
             val name = edtCustName.text.toString().trim()
             if (name.isEmpty()) {
-                Toast.makeText(this, "賳丕賲 賲卮鬲乇蹖 乇丕 賵丕乇丿 讴賳蹖丿", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "\u0646\u0627\u0645 \u0645\u0634\u062A\u0631\u06CC \u0631\u0627 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (editCustId != null) {
                 customers.find { it.id == editCustId }?.name = name
                 editCustId = null
-                btnAddCust.text = "+ 丕賮夭賵丿賳 賲卮鬲乇蹖 噩丿蹖丿"
+                btnAddCust.text = "+ \u0627\u0641\u0632\u0648\u062F\u0646 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
                 btnCancelEdit.visibility = View.GONE
             } else {
                 customers.add(Customer(System.currentTimeMillis(), name))
@@ -442,7 +440,7 @@ class MainActivity : AppCompatActivity() {
         btnCancelEdit.setOnClickListener {
             editCustId = null
             edtCustName.text.clear()
-            btnAddCust.text = "+ 丕賮夭賵丿賳 賲卮鬲乇蹖 噩丿蹖丿"
+            btnAddCust.text = "+ \u0627\u0641\u0632\u0648\u062F\u0646 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
             btnCancelEdit.visibility = View.GONE
         }
 
@@ -463,7 +461,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnBack = Button(this).apply {
-            text = "鈫� 亘丕夭诏卮鬲"
+            text = "\u2190 \u0628\u0627\u0632\u06AF\u0634\u062A"
             textSize = 13f
             background = makeRoundedCard(Color.parseColor("#66736F"), Color.parseColor("#66736F"), 0, 14f)
             setTextColor(Color.WHITE)
@@ -492,7 +490,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(tvBalance)
 
         val tvFormHeader = TextView(this).apply {
-            text = "孬亘鬲 鬲乇丕讴賳卮 噩丿蹖丿 (亘乇丕蹖 賵蹖乇丕蹖卮 乇賵蹖 鬲乇丕讴賳卮 亘夭賳蹖丿)"
+            text = "\u062B\u0628\u062A \u062A\u0631\u0627\u06A9\u0646\u0634 \u062C\u062F\u06CC\u062F (\u0628\u0631\u0627\u06CC \u0648\u06CC\u0631\u0627\u06CC\u0634 \u0631\u0648\u06CC \u062A\u0631\u0627\u06A9\u0646\u0634 \u0628\u0632\u0646\u06CC\u062F)"
             textSize = 13f
             setTextColor(Color.parseColor("#66736F"))
             setPadding(0, 0, 0, 8)
@@ -500,14 +498,14 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(tvFormHeader)
 
         val edtDesc = EditText(this).apply {
-            hint = "賳丕賲 讴丕賱丕 蹖丕 卮乇丨"
+            hint = "\u0646\u0627\u0645 \u06A9\u0627\u0644\u0627 \u06CC\u0627 \u0634\u0631\u062D"
             setPadding(24, 20, 24, 20)
             background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
         }
         rootLayout.addView(edtDesc)
 
         val edtAmount = EditText(this).apply {
-            hint = "賲亘賱睾 (鬲賵賲丕賳)"
+            hint = "\u0645\u0628\u0644\u063A (\u062A\u0648\u0645\u0627\u0646)"
             inputType = InputType.TYPE_CLASS_NUMBER
             setPadding(24, 20, 24, 20)
             background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
@@ -525,7 +523,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val btnSale = Button(this).apply {
-            text = "孬亘鬲 讴丕賱丕 (亘丿賴讴丕乇)"
+            text = "\u062B\u0628\u062A \u06A9\u0627\u0644\u0627 (\u0628\u062F\u0647\u06A9\u0627\u0631)"
             background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
@@ -534,7 +532,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val btnPayment = Button(this).apply {
-            text = "丿乇蹖丕賮鬲 賵噩賴 (鬲爻賵蹖賴)"
+            text = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647 (\u062A\u0633\u0648\u06CC\u0647)"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
@@ -547,7 +545,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(btnLayout)
 
         val btnCancelEntryEdit = Button(this).apply {
-            text = "賱睾賵 賵蹖乇丕蹖卮"
+            text = "\u0644\u063A\u0648 \u0648\u06CC\u0631\u0627\u06CC\u0634"
             background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
             setTextColor(Color.WHITE)
             visibility = View.GONE
@@ -573,9 +571,9 @@ class MainActivity : AppCompatActivity() {
             editEntryId = null
             edtDesc.text.clear()
             edtAmount.text.clear()
-            tvFormHeader.text = "孬亘鬲 鬲乇丕讴賳卮 噩丿蹖丿 (亘乇丕蹖 賵蹖乇丕蹖卮 乇賵蹖 鬲乇丕讴賳卮 亘夭賳蹖丿)"
-            btnSale.text = "孬亘鬲 讴丕賱丕 (亘丿賴讴丕乇)"
-            btnPayment.text = "丿乇蹖丕賮鬲 賵噩賴 (鬲爻賵蹖賴)"
+            tvFormHeader.text = "\u062B\u0628\u062A \u062A\u0631\u0627\u06A9\u0646\u0634 \u062C\u062F\u06CC\u062F (\u0628\u0631\u0627\u06CC \u0648\u06CC\u0631\u0627\u06CC\u0634 \u0631\u0648\u06CC \u062A\u0631\u0627\u06A9\u0646\u0634 \u0628\u0632\u0646\u06CC\u062F)"
+            btnSale.text = "\u062B\u0628\u062A \u06A9\u0627\u0644\u0627 (\u0628\u062F\u0647\u06A9\u0627\u0631)"
+            btnPayment.text = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647 (\u062A\u0633\u0648\u06CC\u0647)"
             btnSale.visibility = View.VISIBLE
             btnPayment.visibility = View.VISIBLE
             btnCancelEntryEdit.visibility = View.GONE
@@ -589,15 +587,15 @@ class MainActivity : AppCompatActivity() {
             val balance = custEntries.fold(0L) { acc, e -> if (e.type == "sale") acc + e.amount else acc - e.amount }
 
             tvBalance.text = when {
-                balance > 0 -> "亘丿賴蹖 賲卮鬲乇蹖: %,d 鬲賵賲丕賳".format(balance)
-                balance < 0 -> "胤賱亘 賲卮鬲乇蹖: %,d 鬲賵賲丕賳".format(abs(balance))
-                else -> "丨爻丕亘 鬲爻賵蹖賴 丕爻鬲"
+                balance > 0 -> String.format(Locale.US, "\u0628\u062F\u0647\u06CC \u0645\u0634\u062A\u0631\u06CC: %,d \u062A\u0648\u0645\u0627\u0646", balance)
+                balance < 0 -> String.format(Locale.US, "\u0637\u0644\u0628 \u0645\u0634\u062A\u0631\u06CC: %,d \u062A\u0648\u0645\u0627\u0646", abs(balance))
+                else -> "\u062D\u0633\u0627\u0628 \u062A\u0633\u0648\u06CC\u0647 \u0627\u0633\u062A"
             }
             tvBalance.setTextColor(if (balance > 0) Color.parseColor("#B23A48") else Color.parseColor("#176B5B"))
 
             if (custEntries.isEmpty()) {
                 val tv = TextView(this).apply {
-                    text = "鬲乇丕讴賳卮蹖 孬亘鬲 賳卮丿賴 丕爻鬲."
+                    text = "\u062A\u0631\u0627\u06A9\u0646\u0634\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A."
                     gravity = Gravity.CENTER
                     setPadding(0, 40, 0, 0)
                     setTextColor(Color.parseColor("#66736F"))
@@ -606,10 +604,13 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
+            val defaultPayDesc = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647"
+            val prefixSale = "\u062E\u0631\u06CC\u062F: "
+            val prefixPay = "\u067E\u0631\u062F\u0627\u062E\u062A: "
+
             custEntries.reversed().forEach { e ->
                 val borderCol = if (e.type == "sale") Color.parseColor("#B23A48") else Color.parseColor("#176B5B")
 
-                // Full thick colored border around the entire entry card (10px)
                 val card = LinearLayout(this).apply {
                     orientation = LinearLayout.HORIZONTAL
                     gravity = Gravity.CENTER_VERTICAL
@@ -625,15 +626,15 @@ class MainActivity : AppCompatActivity() {
                     layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
                     setOnClickListener {
                         editEntryId = e.id
-                        edtDesc.setText(if (e.description == "丿乇蹖丕賮鬲 賵噩賴") "" else e.description)
+                        edtDesc.setText(if (e.description == defaultPayDesc) "" else e.description)
                         edtAmount.setText(e.amount.toString())
-                        tvFormHeader.text = "丿乇 丨丕賱 賵蹖乇丕蹖卮 鬲乇丕讴賳卮..."
+                        tvFormHeader.text = "\u062F\u0631 \u062D\u0627\u0644 \u0648\u06CC\u0631\u0627\u06CC\u0634 \u062A\u0631\u0627\u06A9\u0646\u0634..."
                         if (e.type == "sale") {
-                            btnSale.text = "匕禺蹖乇賴 鬲睾蹖蹖乇丕鬲 (亘丿賴讴丕乇)"
+                            btnSale.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A (\u0628\u062F\u0647\u06A9\u0627\u0631)"
                             btnSale.visibility = View.VISIBLE
                             btnPayment.visibility = View.GONE
                         } else {
-                            btnPayment.text = "匕禺蹖乇賴 鬲睾蹖蹖乇丕鬲 (鬲爻賵蹖賴)"
+                            btnPayment.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A (\u062A\u0633\u0648\u06CC\u0647)"
                             btnPayment.visibility = View.VISIBLE
                             btnSale.visibility = View.GONE
                         }
@@ -641,16 +642,16 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                val titlePrefix = if (e.type == "sale") "禺乇蹖丿: " else "倬乇丿丕禺鬲: "
+                val titlePrefix = if (e.type == "sale") prefixSale else prefixPay
                 val tvEntryTitle = TextView(this).apply {
-                    text = "$titlePrefix${e.description}"
+                    text = titlePrefix + e.description
                     textSize = 15f
                     setTypeface(null, Typeface.BOLD)
                     setTextColor(Color.parseColor("#18312C"))
                 }
 
                 val tvEntrySub = TextView(this).apply {
-                    text = "${e.date} 鈥� %,d 鬲賵賲丕賳".format(e.amount)
+                    text = String.format(Locale.US, "%s \u2014 %,d \u062A\u0648\u0645\u0627\u0646", e.date, e.amount)
                     textSize = 14f
                     setTextColor(Color.parseColor("#4A5568"))
                     setPadding(0, 6, 0, 0)
@@ -660,9 +661,8 @@ class MainActivity : AppCompatActivity() {
                 infoBox.addView(tvEntrySub)
                 card.addView(infoBox)
 
-                // Compact small delete button
                 val btnDelEntry = Button(this).apply {
-                    text = "丨匕賮"
+                    text = "\u062D\u0630\u0641"
                     textSize = 10f
                     background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 10f)
                     setTextColor(Color.WHITE)
@@ -676,15 +676,15 @@ class MainActivity : AppCompatActivity() {
                     }
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
-                            .setTitle("丨匕賮 鬲乇丕讴賳卮")
-                            .setMessage("丕蹖賳 鬲乇丕讴賳卮 丨匕賮 卮賵丿責")
-                            .setPositiveButton("亘賱賴") { _, _ ->
+                            .setTitle("\u062D\u0630\u0641 \u062A\u0631\u0627\u06A9\u0646\u0634")
+                            .setMessage("\u0627\u06CC\u0646 \u062A\u0631\u0627\u06A9\u0646\u0634 \u062D\u0630\u0641 \u0634\u0648\u062F\u061F")
+                            .setPositiveButton("\u0628\u0644\u0647") { _, _ ->
                                 entries.remove(e)
                                 resetEntryForm()
                                 saveData()
                                 updateLedgerUI()
                             }
-                            .setNegativeButton("禺蹖乇", null)
+                            .setNegativeButton("\u062E\u06CC\u0631", null)
                             .show()
                     }
                 }
@@ -697,7 +697,7 @@ class MainActivity : AppCompatActivity() {
             val desc = edtDesc.text.toString().trim()
             val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
             if (amount <= 0 || desc.isEmpty()) {
-                Toast.makeText(this, "賳丕賲 讴丕賱丕 賵 賲亘賱睾 賲毓鬲亘乇 賵丕乇丿 讴賳蹖丿", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "\u0646\u0627\u0645 \u06A9\u0627\u0644\u0627 \u0648 \u0645\u0628\u0644\u063A \u0645\u0639\u062A\u0628\u0631 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (editEntryId != null) {
@@ -718,10 +718,10 @@ class MainActivity : AppCompatActivity() {
             val desc = edtDesc.text.toString().trim()
             val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
             if (amount <= 0) {
-                Toast.makeText(this, "賲亘賱睾 賲毓鬲亘乇 賵丕乇丿 讴賳蹖丿", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "\u0645\u0628\u0644\u063A \u0645\u0639\u062A\u0628\u0631 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            val finalDesc = if (desc.isEmpty()) "丿乇蹖丕賮鬲 賵噩賴" else desc
+            val finalDesc = if (desc.isEmpty()) "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647" else desc
             if (editEntryId != null) {
                 entries.find { it.id == editEntryId }?.apply {
                     type = "payment"
