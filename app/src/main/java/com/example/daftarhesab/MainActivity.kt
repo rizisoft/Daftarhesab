@@ -12,6 +12,7 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.View
 import android.widget.*
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -56,9 +57,9 @@ class MainActivity : AppCompatActivity() {
                     contentResolver.openOutputStream(uri)?.use { out ->
                         out.write(buildJsonString().toByteArray(Charsets.UTF_8))
                     }
-                    Toast.makeText(this, "\u0641\u0627\u06CC\u0644 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646 \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0630\u062E\u06CC\u0631\u0647 \u0634\u062F", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "فایل پشتیبان با موفقیت ذخیره شد", Toast.LENGTH_SHORT).show()
                 } catch (e: Exception) {
-                    Toast.makeText(this, "\u062E\u0637\u0627 \u062F\u0631 \u0630\u062E\u06CC\u0631\u0647 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "خطا در ذخیره پشتیبان", Toast.LENGTH_SHORT).show()
                 }
             }
         }
@@ -69,6 +70,20 @@ class MainActivity : AppCompatActivity() {
         dbFile = File(filesDir, "daftar_hesab_db.json")
         loadData()
         renderHome()
+
+        // مدیریت دکمه Back برای جلوگیری از خروج ناخواسته و بازگشت به صفحه قبل
+        onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                if (activeCustId != null) {
+                    // اگر داخل حساب مشتری هستیم، برگردیم به صفحه اصلی
+                    renderHome()
+                } else {
+                    // اگر در صفحه اصلی هستیم، اجازه دهیم برنامه بسته شود
+                    isEnabled = false
+                    onBackPressedDispatcher.onBackPressed()
+                }
+            }
+        })
     }
 
     override fun onStop() {
@@ -110,6 +125,7 @@ class MainActivity : AppCompatActivity() {
     private fun autoBackupAllStorages() {
         val jsonContent = buildJsonString()
         
+        // 1. ذخیره در پوشه عمومی Documents حافظه داخلی
         try {
             val publicDocDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
             val targetDir = File(publicDocDir, "DaftarHesab")
@@ -119,6 +135,7 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
+        // 2. ذخیره در حافظه داخلی اختصاصی برنامه (Documents)
         try {
             val internalDir = getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: filesDir
             if (!internalDir.exists()) internalDir.mkdirs()
@@ -127,14 +144,17 @@ class MainActivity : AppCompatActivity() {
             e.printStackTrace()
         }
 
+        // 3. ذخیره روی کارت حافظه SD (در صورت وجود کارت حافظه جانبی فعال)
         try {
             val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
             if (externalDirs != null && externalDirs.size > 1) {
                 for (i in 1 until externalDirs.size) {
                     val sdDir = externalDirs[i]
                     if (sdDir != null && Environment.getExternalStorageState(sdDir) == Environment.MEDIA_MOUNTED) {
-                        if (!sdDir.exists()) sdDir.mkdirs()
-                        File(sdDir, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
+                        // مسیر دقیق پوشه اندروید مموری کارت برای جلوگیری از خطای دسترسی
+                        val appSdDir = File(sdDir.absolutePath, "DaftarHesab")
+                        if (!appSdDir.exists()) appSdDir.mkdirs()
+                        File(appSdDir, "DaftarHesab_SD_Backup.json").writeText(jsonContent, Charsets.UTF_8)
                     }
                 }
             }
@@ -190,12 +210,12 @@ class MainActivity : AppCompatActivity() {
             if (parseJsonAndLoad(text)) {
                 saveData()
                 renderHome()
-                Toast.makeText(this, "\u0627\u0637\u0644\u0627\u0639\u0627\u062A \u0628\u0627 \u0645\u0648\u0641\u0642\u06CC\u062A \u0628\u0627\u0632\u06CC\u0627\u0628\u06CC \u0634\u062F!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "اطلاعات با موفقیت بازیابی شد!", Toast.LENGTH_SHORT).show()
             } else {
-                Toast.makeText(this, "\u0641\u0627\u06CC\u0644 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646 \u0645\u0639\u062A\u0628\u0631 \u0646\u06CC\u0633\u062A", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "فایل پشتیبان معتبر نیست", Toast.LENGTH_SHORT).show()
             }
         } catch (e: Exception) {
-            Toast.makeText(this, "\u062E\u0637\u0627 \u062F\u0631 \u062E\u0648\u0627\u0646\u062F\u0646 \u0641\u0627\u06CC\u0644", Toast.LENGTH_SHORT).show()
+            Toast.makeText(this, "خطا در خواندن فایل", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -244,7 +264,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val tvTitle = TextView(this).apply {
-            text = "\uD83D\uDCD4 \u062F\u0641\u062A\u0631 \u062D\u0633\u0627\u0628 \u0645\u0646"
+            text = "📔 دفتر حساب من"
             textSize = 21f
             setTextColor(Color.parseColor("#176B5B"))
             gravity = Gravity.CENTER
@@ -254,14 +274,14 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(tvTitle)
 
         val edtCustName = EditText(this).apply {
-            hint = "\u0646\u0627\u0645 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
+            hint = "نام مشتری جدید"
             setPadding(28, 24, 28, 24)
             background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
         }
         rootLayout.addView(edtCustName)
 
         val btnAddCust = Button(this).apply {
-            text = "+ \u0627\u0641\u0632\u0648\u062F\u0646 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
+            text = "+ افزودن مشتری جدید"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
@@ -272,7 +292,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(btnAddCust)
 
         val btnCancelEdit = Button(this).apply {
-            text = "\u0644\u063A\u0648 \u0648\u06CC\u0631\u0627\u06CC\u0634"
+            text = "لغو ویرایش"
             background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
             setTextColor(Color.WHITE)
             visibility = View.GONE
@@ -292,7 +312,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnBackup = Button(this).apply {
-            text = "\u0630\u062E\u06CC\u0631\u0647 \u067E\u0634\u062A\u06CC\u0628\u0627\u0646"
+            text = "ذخیره پشتیبان"
             textSize = 12f
             background = makeRoundedCard(Color.parseColor("#2C5282"), Color.parseColor("#2C5282"), 0, 16f)
             setTextColor(Color.WHITE)
@@ -310,7 +330,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnRestore = Button(this).apply {
-            text = "\u0628\u0627\u0632\u06CC\u0627\u0628\u06CC \u067E\u0634\u062A\u06CC\u0628\u0627\u0646"
+            text = "بازیابی پشتیبان"
             textSize = 12f
             background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
             setTextColor(Color.WHITE)
@@ -343,7 +363,7 @@ class MainActivity : AppCompatActivity() {
             listLayout.removeAllViews()
             if (customers.isEmpty()) {
                 val tv = TextView(this).apply {
-                    text = "\u0647\u0646\u0648\u0632 \u0645\u0634\u062A\u0631\u06CC\u200C\u0627\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A."
+                    text = "هنوز مشتری‌ای ثبت نشده است."
                     gravity = Gravity.CENTER
                     setPadding(0, 60, 0, 0)
                     setTextColor(Color.parseColor("#66736F"))
@@ -381,9 +401,9 @@ class MainActivity : AppCompatActivity() {
 
                 val tvBalance = TextView(this).apply {
                     text = when {
-                        balance > 0 -> String.format(Locale.US, "\u0628\u062F\u0647\u06A9\u0627\u0631: %,d \u062A\u0648\u0645\u0627\u0646", balance)
-                        balance < 0 -> String.format(Locale.US, "\u0637\u0644\u0628\u06A9\u0627\u0631: %,d \u062A\u0648\u0645\u0627\u0646", abs(balance))
-                        else -> "\u062A\u0633\u0648\u06CC\u0647"
+                        balance > 0 -> String.format(Locale.US, "بدهکار: %,d تومان", balance)
+                        balance < 0 -> String.format(Locale.US, "طلبکار: %,d تومان", abs(balance))
+                        else -> "تسویه"
                     }
                     textSize = 14f
                     setTextColor(if (balance > 0) Color.parseColor("#B23A48") else Color.parseColor("#176B5B"))
@@ -395,7 +415,7 @@ class MainActivity : AppCompatActivity() {
                 card.addView(infoLayout)
 
                 val btnEdit = Button(this).apply {
-                    text = "\u0648\u06CC\u0631\u0627\u06CC\u0634"
+                    text = "ویرایش"
                     textSize = 11f
                     background = makeRoundedCard(Color.parseColor("#D69E2E"), Color.parseColor("#D69E2E"), 0, 12f)
                     setTextColor(Color.WHITE)
@@ -408,14 +428,14 @@ class MainActivity : AppCompatActivity() {
                     setOnClickListener {
                         editCustId = c.id
                         edtCustName.setText(c.name)
-                        btnAddCust.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A \u0645\u0634\u062A\u0631\u06CC"
+                        btnAddCust.text = "ذخیره تغییرات مشتری"
                         btnCancelEdit.visibility = View.VISIBLE
                     }
                 }
                 card.addView(btnEdit)
 
                 val btnDel = Button(this).apply {
-                    text = "\u062D\u0630\u0641"
+                    text = "حذف"
                     textSize = 11f
                     background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 12f)
                     setTextColor(Color.WHITE)
@@ -425,15 +445,15 @@ class MainActivity : AppCompatActivity() {
                     layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT)
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
-                            .setTitle("\u062D\u0630\u0641 \u0645\u0634\u062A\u0631\u06CC")
-                            .setMessage("\u062A\u0645\u0627\u0645 \u062A\u0631\u0627\u06A9\u0646\u0634\u200C\u0647\u0627\u06CC \u0627\u06CC\u0646 \u0645\u0634\u062A\u0631\u06CC \u0646\u06CC\u0632 \u062D\u0630\u0641 \u062E\u0648\u0627\u0647\u0646\u062F \u0634\u062F. \u0627\u062F\u0627\u0645\u0647 \u0645\u06CC\u200C\u062F\u0647\u06CC\u062F\u061F")
-                            .setPositiveButton("\u0628\u0644\u0647") { _, _ ->
+                            .setTitle("حذف مشتری")
+                            .setMessage("تمام تراکنش‌های این مشتری نیز حذف خواهند شد. ادامه می‌دهید؟")
+                            .setPositiveButton("بله") { _, _ ->
                                 customers.remove(c)
                                 entries.removeAll { it.customerId == c.id }
                                 saveData()
                                 refreshList()
                             }
-                            .setNegativeButton("\u062E\u06CC\u0631", null)
+                            .setNegativeButton("خیر", null)
                             .show()
                     }
                 }
@@ -445,14 +465,14 @@ class MainActivity : AppCompatActivity() {
         btnAddCust.setOnClickListener {
             val name = edtCustName.text.toString().trim()
             if (name.isEmpty()) {
-                Toast.makeText(this, "\u0646\u0627\u0645 \u0645\u0634\u062A\u0631\u06CC \u0631\u0627 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "نام مشتری را وارد کنید", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
 
             if (editCustId != null) {
                 customers.find { it.id == editCustId }?.name = name
                 editCustId = null
-                btnAddCust.text = "+ \u0627\u0641\u0632\u0648\u062F\u0646 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
+                btnAddCust.text = "+ افزودن مشتری جدید"
                 btnCancelEdit.visibility = View.GONE
             } else {
                 customers.add(Customer(System.currentTimeMillis(), name))
@@ -466,7 +486,7 @@ class MainActivity : AppCompatActivity() {
         btnCancelEdit.setOnClickListener {
             editCustId = null
             edtCustName.text.clear()
-            btnAddCust.text = "+ \u0627\u0641\u0632\u0648\u062F\u0646 \u0645\u0634\u062A\u0631\u06CC \u062C\u062F\u06CC\u062F"
+            btnAddCust.text = "+ افزودن مشتری جدید"
             btnCancelEdit.visibility = View.GONE
         }
 
@@ -487,7 +507,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         val btnBack = Button(this).apply {
-            text = "\u2190 \u0628\u0627\u0632\u06AF\u0634\u062A"
+            text = "← بازگشت"
             textSize = 13f
             background = makeRoundedCard(Color.parseColor("#66736F"), Color.parseColor("#66736F"), 0, 14f)
             setTextColor(Color.WHITE)
@@ -516,7 +536,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(tvBalance)
 
         val tvFormHeader = TextView(this).apply {
-            text = "\u062B\u0628\u062A \u062A\u0631\u0627\u06A9\u0646\u0634 \u062C\u062F\u06CC\u062F (\u0628\u0631\u0627\u06CC \u0648\u06CC\u0631\u0627\u06CC\u0634 \u0631\u0648\u06CC \u062A\u0631\u0627\u06A9\u0646\u0634 \u0628\u0632\u0646\u06CC\u062F)"
+            text = "ثبت تراکنش جدید (برای ویرایش روی تراکنش بزنید)"
             textSize = 13f
             setTextColor(Color.parseColor("#66736F"))
             setPadding(0, 0, 0, 8)
@@ -524,14 +544,14 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(tvFormHeader)
 
         val edtDesc = EditText(this).apply {
-            hint = "\u0646\u0627\u0645 \u06A9\u0627\u0644\u0627 \u06CC\u0627 \u0634\u0631\u062D"
+            hint = "نام کالا یا شرح"
             setPadding(24, 20, 24, 20)
             background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
         }
         rootLayout.addView(edtDesc)
 
         val edtAmount = EditText(this).apply {
-            hint = "\u0645\u0628\u0644\u063A (\u062A\u0648\u0645\u0627\u0646)"
+            hint = "مبلغ (تومان)"
             inputType = InputType.TYPE_CLASS_NUMBER
             setPadding(24, 20, 24, 20)
             background = makeRoundedCard(Color.WHITE, Color.parseColor("#CCCCCC"), 2, 16f)
@@ -549,7 +569,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val btnSale = Button(this).apply {
-            text = "\u062B\u0628\u062A \u06A9\u0627\u0644\u0627 (\u0628\u062F\u0647\u06A9\u0627\u0631)"
+            text = "ثبت کالا (بدهکار)"
             background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
@@ -558,7 +578,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         val btnPayment = Button(this).apply {
-            text = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647 (\u062A\u0633\u0648\u06CC\u0647)"
+            text = "دریافت وجه (تسویه)"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
             setTextColor(Color.WHITE)
             setTypeface(null, Typeface.BOLD)
@@ -571,7 +591,7 @@ class MainActivity : AppCompatActivity() {
         rootLayout.addView(btnLayout)
 
         val btnCancelEntryEdit = Button(this).apply {
-            text = "\u0644\u063A\u0648 \u0648\u06CC\u0631\u0627\u06CC\u0634"
+            text = "لغو ویرایش"
             background = makeRoundedCard(Color.parseColor("#718096"), Color.parseColor("#718096"), 0, 16f)
             setTextColor(Color.WHITE)
             visibility = View.GONE
@@ -597,9 +617,9 @@ class MainActivity : AppCompatActivity() {
             editEntryId = null
             edtDesc.text.clear()
             edtAmount.text.clear()
-            tvFormHeader.text = "\u062B\u0628\u062A \u062A\u0631\u0627\u06A9\u0646\u0634 \u062C\u062F\u06CC\u062F (\u0628\u0631\u0627\u06CC \u0648\u06CC\u0631\u0627\u06CC\u0634 \u0631\u0648\u06CC \u062A\u0631\u0627\u06A9\u0646\u0634 \u0628\u0632\u0646\u06CC\u062F)"
-            btnSale.text = "\u062B\u0628\u062A \u06A9\u0627\u0644\u0627 (\u0628\u062F\u0647\u06A9\u0627\u0631)"
-            btnPayment.text = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647 (\u062A\u0633\u0648\u06CC\u0647)"
+            tvFormHeader.text = "ثبت تراکنش جدید (برای ویرایش روی تراکنش بزنید)"
+            btnSale.text = "ثبت کالا (بدهکار)"
+            btnPayment.text = "دریافت وجه (تسویه)"
             btnSale.visibility = View.VISIBLE
             btnPayment.visibility = View.VISIBLE
             btnCancelEntryEdit.visibility = View.GONE
@@ -613,15 +633,15 @@ class MainActivity : AppCompatActivity() {
             val balance = custEntries.fold(0L) { acc, e -> if (e.type == "sale") acc + e.amount else acc - e.amount }
 
             tvBalance.text = when {
-                balance > 0 -> String.format(Locale.US, "\u0628\u062F\u0647\u06CC \u0645\u0634\u062A\u0631\u06CC: %,d \u062A\u0648\u0645\u0627\u0646", balance)
-                balance < 0 -> String.format(Locale.US, "\u0637\u0644\u0628 \u0645\u0634\u062A\u0631\u06CC: %,d \u062A\u0648\u0645\u0627\u0646", abs(balance))
-                else -> "\u062D\u0633\u0627\u0628 \u062A\u0633\u0648\u06CC\u0647 \u0627\u0633\u062A"
+                balance > 0 -> String.format(Locale.US, "بدهی مشتری: %,d تومان", balance)
+                balance < 0 -> String.format(Locale.US, "طلب مشتری: %,d تومان", abs(balance))
+                else -> "حساب تسویه است"
             }
             tvBalance.setTextColor(if (balance > 0) Color.parseColor("#B23A48") else Color.parseColor("#176B5B"))
 
             if (custEntries.isEmpty()) {
                 val tv = TextView(this).apply {
-                    text = "\u062A\u0631\u0627\u06A9\u0646\u0634\u06CC \u062B\u0628\u062A \u0646\u0634\u062F\u0647 \u0627\u0633\u062A."
+                    text = "تراکنشی ثبت نشده است."
                     gravity = Gravity.CENTER
                     setPadding(0, 40, 0, 0)
                     setTextColor(Color.parseColor("#66736F"))
@@ -630,9 +650,9 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            val defaultPayDesc = "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647"
-            val prefixSale = "\u062E\u0631\u06CC\u062F: "
-            val prefixPay = "\u067E\u0631\u062F\u0627\u062E\u062A: "
+            val defaultPayDesc = "دریافت وجه"
+            val prefixSale = "خرید: "
+            val prefixPay = "پرداخت: "
 
             custEntries.reversed().forEach { e ->
                 val borderCol = if (e.type == "sale") Color.parseColor("#B23A48") else Color.parseColor("#176B5B")
@@ -654,13 +674,13 @@ class MainActivity : AppCompatActivity() {
                         editEntryId = e.id
                         edtDesc.setText(if (e.description == defaultPayDesc) "" else e.description)
                         edtAmount.setText(e.amount.toString())
-                        tvFormHeader.text = "\u062F\u0631 \u062D\u0627\u0644 \u0648\u06CC\u0631\u0627\u06CC\u0634 \u062A\u0631\u0627\u06A9\u0646\u0634..."
+                        tvFormHeader.text = "در حال ویرایش تراکنش..."
                         if (e.type == "sale") {
-                            btnSale.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A (\u0628\u062F\u0647\u06A9\u0627\u0631)"
+                            btnSale.text = "ذخیره تغییرات (بدهکار)"
                             btnSale.visibility = View.VISIBLE
                             btnPayment.visibility = View.GONE
                         } else {
-                            btnPayment.text = "\u0630\u062E\u06CC\u0631\u0647 \u062A\u063A\u06CC\u06CC\u0631\u0627\u062A (\u062A\u0633\u0648\u06CC\u0647)"
+                            btnPayment.text = "ذخیره تغییرات (تسویه)"
                             btnPayment.visibility = View.VISIBLE
                             btnSale.visibility = View.GONE
                         }
@@ -677,7 +697,7 @@ class MainActivity : AppCompatActivity() {
                 }
 
                 val tvEntrySub = TextView(this).apply {
-                    text = String.format(Locale.US, "%s \u2014 %,d \u062A\u0648\u0645\u0627\u0646", e.date, e.amount)
+                    text = String.format(Locale.US, "%s — %,d تومان", e.date, e.amount)
                     textSize = 14f
                     setTextColor(Color.parseColor("#4A5568"))
                     setPadding(0, 6, 0, 0)
@@ -688,7 +708,7 @@ class MainActivity : AppCompatActivity() {
                 card.addView(infoBox)
 
                 val btnDelEntry = Button(this).apply {
-                    text = "\u062D\u0630\u0641"
+                    text = "حذف"
                     textSize = 10f
                     background = makeRoundedCard(Color.parseColor("#B23A48"), Color.parseColor("#B23A48"), 0, 10f)
                     setTextColor(Color.WHITE)
@@ -702,15 +722,15 @@ class MainActivity : AppCompatActivity() {
                     }
                     setOnClickListener {
                         AlertDialog.Builder(this@MainActivity)
-                            .setTitle("\u062D\u0630\u0641 \u062A\u0631\u0627\u06A9\u0646\u0634")
-                            .setMessage("\u0627\u06CC\u0646 \u062A\u0631\u0627\u06A9\u0646\u0634 \u062D\u0630\u0641 \u0634\u0648\u062F\u061F")
-                            .setPositiveButton("\u0628\u0644\u0647") { _, _ ->
+                            .setTitle("حذف تراکنش")
+                            .setMessage("این تراکنش حذف شود؟")
+                            .setPositiveButton("بله") { _, _ ->
                                 entries.remove(e)
                                 resetEntryForm()
                                 saveData()
                                 updateLedgerUI()
                             }
-                            .setNegativeButton("\u062E\u06CC\u0631", null)
+                            .setNegativeButton("خیر", null)
                             .show()
                     }
                 }
@@ -723,7 +743,7 @@ class MainActivity : AppCompatActivity() {
             val desc = edtDesc.text.toString().trim()
             val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
             if (amount <= 0 || desc.isEmpty()) {
-                Toast.makeText(this, "\u0646\u0627\u0645 \u06A9\u0627\u0644\u0627 \u0648 \u0645\u0628\u0644\u063A \u0645\u0639\u062A\u0628\u0631 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "نام کالا و مبلغ معتبر وارد کنید", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
             if (editEntryId != null) {
@@ -744,10 +764,10 @@ class MainActivity : AppCompatActivity() {
             val desc = edtDesc.text.toString().trim()
             val amount = edtAmount.text.toString().toLongOrNull() ?: 0L
             if (amount <= 0) {
-                Toast.makeText(this, "\u0645\u0628\u0644\u063A \u0645\u0639\u062A\u0628\u0631 \u0648\u0627\u0631\u062F \u06A9\u0646\u06CC\u062F", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "مبلغ معتبر وارد کنید", Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
-            val finalDesc = if (desc.isEmpty()) "\u062F\u0631\u06CC\u0627\u0641\u062A \u0648\u062C\u0647" else desc
+            val finalDesc = if (desc.isEmpty()) "دریافت وجه" else desc
             if (editEntryId != null) {
                 entries.find { it.id == editEntryId }?.apply {
                     type = "payment"
