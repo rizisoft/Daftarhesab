@@ -324,7 +324,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun renderHome() {
-        val rootLayout = LinearLayout(this).applies {
+        val rootLayout = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(32, 32, 32, 32)
             setBackgroundColor(Color.parseColor("#F5F7F6"))
