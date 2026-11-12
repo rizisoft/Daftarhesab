@@ -144,20 +144,16 @@ class MainActivity : AppCompatActivity() {
         val dateStr = getJalaliDate().replace("/", "-")
         val fileName = "DaftarHesab_$dateStr.json"
 
-        // 1. ذخیره در پوشه عمومی Documents/DaftarHesab حافظه داخلی + پاکسازی فایل‌های بالای یک ماه
         try {
             val publicDocDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS)
             val targetDir = File(publicDocDir, "DaftarHesab")
             if (!targetDir.exists()) targetDir.mkdirs()
-            
-            // ذخیره فایل جدید با نام تاریخ روز (اگر از قبل در این روز فایلی باشد به‌روز می‌شود، ولی روزهای دیگر دست‌نخورده می‌مانند)
             File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
             cleanOldBackups(targetDir)
         } catch (e: Exception) {
             e.printStackTrace()
         }
 
-        // 2. ذخیره در کارت حافظه (SD Card) در پوشه Documents/DaftarHesab + پاکسازی فایل‌های بالای یک ماه
         try {
             val externalDirs = getExternalFilesDirs(Environment.DIRECTORY_DOCUMENTS)
             if (externalDirs != null && externalDirs.size > 1) {
@@ -167,7 +163,6 @@ class MainActivity : AppCompatActivity() {
                         val rootSd = sdDir.absolutePath.substringBefore("/Android")
                         val simpleSdFolder = File(rootSd, "Documents/DaftarHesab")
                         if (!simpleSdFolder.exists()) simpleSdFolder.mkdirs()
-                        
                         File(simpleSdFolder, fileName).writeText(jsonContent, Charsets.UTF_8)
                         cleanOldBackups(simpleSdFolder)
                     }
@@ -794,4 +789,10 @@ class MainActivity : AppCompatActivity() {
             }
             resetEntryForm()
             saveData()
-            update
+            updateLedgerUI()
+        }
+
+        setContentView(rootLayout)
+        updateLedgerUI()
+    }
+}
