@@ -121,8 +121,10 @@ class MainActivity : AppCompatActivity() {
                 val jm = if (days < 186) 1 + (days / 31) else 7 + ((days - 186) / 30)
                 val jd = 1 + (if (days < 186) (days % 31) else ((days - 186) % 30))
                 
-                val fileName = String.format(Locale.US, "DaftarHesab_%04d-%02d-%02d.json", jy, jm, jd)
-
+                val hour = cal.get(Calendar.HOUR_OF_DAY)
+val minute = cal.get(Calendar.MINUTE)
+val second = cal.get(Calendar.SECOND)
+val fileName = String.format(Locale.US, "DaftarHesab_%04d-%02d-%02d_%02d-%02d-%02d.json", jy, jm, jd, hour, minute, second)
                 val storages = activity.getExternalFilesDirs(null)
                 for (storage in storages) {
                     if (storage != null) {
