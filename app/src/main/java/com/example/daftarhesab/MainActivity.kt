@@ -2,6 +2,7 @@ package com.example.daftarhesab
 
 import android.app.Activity
 import android.content.Intent
+import android.content.Context
 import android.graphics.Color
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -170,6 +171,30 @@ class MainActivity : AppCompatActivity() {
         renderHome()
     }
 
+    override fun onStop() {
+        super.onStop()
+        // پشتیبان‌گیری خودکار در پوشه اسناد هنگام خروج
+        autoBackupAllStorages(this)
+
+        // بررسی اینکه آیا ۷ روز از آخرین ارسال به تلگرام گذشته است یا خیر
+        checkAndSuggestWeeklyTelegramBackup()
+    }
+
+    private fun checkAndSuggestWeeklyTelegramBackup() {
+        val prefs = getSharedPreferences("DaftarPrefs", Context.MODE_PRIVATE)
+        val lastSendTime = prefs.getLong("last_telegram_send", 0L)
+        val currentTime = System.currentTimeMillis()
+        val sevenDaysInMillis = 7L * 24L * 60L * 60L * 1000L
+
+        // اگر ۷ روز (یا بیشتر) گذشته باشد
+        if (currentTime - lastSendTime > sevenDaysInMillis) {
+            // ثبت زمان جدید برای اینکه تا ۷ روز آینده دوباره پرسیده نشود
+            prefs.edit().putLong("last_telegram_send", currentTime).apply()
+            // اجرای ارسال به تلگرام
+            sendBackupToTelegram()
+        }
+    }
+
     override fun onBackPressed() {
         if (backPressedTime + 2000 > System.currentTimeMillis()) {
             super.onBackPressed()
@@ -243,6 +268,34 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, "اطلاعات بازیابی شد!", Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
             Toast.makeText(this, "خطا در خواندن فایل", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    private fun sendBackupToTelegram() {
+        try {
+            val backupFile = File(cacheDir, "daftar_hesab_backup.json")
+            backupFile.writeText(buildJsonString(), Charsets.UTF_8)
+            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", backupFile)
+
+            val intent = Intent(Intent.ACTION_SEND).apply {
+                type = "application/json"
+                putExtra(Intent.EXTRA_STREAM, uri)
+                setPackage("org.telegram.messenger")
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            
+            try {
+                startActivity(intent)
+            } catch (e: Exception) {
+                val generalIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/json"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                startActivity(Intent.createChooser(generalIntent, "ارسال پشتیبان هفتگی به تلگرام"))
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -331,7 +384,6 @@ class MainActivity : AppCompatActivity() {
             layoutDirection = View.LAYOUT_DIRECTION_RTL
         }
 
-        // نوار بالای صفحه (شامل عنوان و منوی سه نقطه)
         val topBar = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -361,6 +413,7 @@ class MainActivity : AppCompatActivity() {
                 val popup = PopupMenu(this@MainActivity, view)
                 popup.menu.add(0, 1, 0, "ذخیره پشتیبان")
                 popup.menu.add(0, 2, 1, "بازیابی پشتیبان")
+                popup.menu.add(0, 3, 2, "ارسال پشتیبان به تلگرام")
                 popup.setOnMenuItemClickListener { item ->
                     when (item.itemId) {
                         1 -> {
@@ -380,6 +433,10 @@ class MainActivity : AppCompatActivity() {
                             restoreLauncher.launch(intent)
                             true
                         }
+                        3 -> {
+                            sendBackupToTelegram()
+                            true
+                        }
                         else -> false
                     }
                 }
@@ -391,7 +448,6 @@ class MainActivity : AppCompatActivity() {
         topBar.addView(btnMenu)
         rootLayout.addView(topBar)
 
-        // دکمه افزودن مشتری جدید
         val btnAddCust = Button(this).apply {
             text = "+ افزودن مشتری جدید"
             background = makeRoundedCard(Color.parseColor("#176B5B"), Color.parseColor("#176B5B"), 0, 16f)
