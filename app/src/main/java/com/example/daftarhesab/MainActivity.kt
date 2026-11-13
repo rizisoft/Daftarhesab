@@ -80,24 +80,63 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        private fun cleanOldFiles(directory: File) {
+            try {
+                if (!directory.exists() || !directory.isDirectory) return
+                val files = directory.listFiles() ?: return
+                val now = System.currentTimeMillis()
+                val thirtyDaysInMillis = 30L * 24L * 60L * 60L * 1000L
+
+                for (file in files) {
+                    if (file.isFile && file.name.startsWith("DaftarHesab_") && file.name.endsWith(".json")) {
+                        if (now - file.lastModified() > thirtyDaysInMillis) {
+                            file.delete()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+
         fun autoBackupAllStorages(activity: AppCompatActivity) {
             try {
                 val jsonContent = buildJsonString()
-                val fileName = "DaftarHesab_Backup.json"
+                
+                val cal = Calendar.getInstance()
+                val gy = cal.get(Calendar.YEAR)
+                val gm = cal.get(Calendar.MONTH) + 1
+                val gd = cal.get(Calendar.DAY_OF_MONTH)
+                val gdm = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
+                val gy2 = if (gm > 2) gy + 1 else gy
+                var days = 355666 + (365 * gy) + ((gy2 + 3) / 4) - ((gy2 + 99) / 100) + ((gy2 + 399) / 400) + gd + gdm[gm - 1]
+                var jy = -1595 + (33 * (days / 12053))
+                days %= 12053
+                jy += 4 * (days / 1461)
+                days %= 1461
+                if (days > 365) {
+                    jy += (days - 1) / 365
+                    days = (days - 1) % 365
+                }
+                val jm = if (days < 186) 1 + (days / 31) else 7 + ((days - 186) / 30)
+                val jd = 1 + (if (days < 186) (days % 31) else ((days - 186) % 30))
+                
+                val fileName = String.format(Locale.US, "DaftarHesab_%04d-%02d-%02d.json", jy, jm, jd)
 
-                // ۱. ذخیره حتمی در حافظه داخلی برنامه (همیشه کار می‌کند)
-                val internalDir = File(activity.filesDir, "DaftarHesabBackups")
-                if (!internalDir.exists()) internalDir.mkdirs()
-                File(internalDir, fileName).writeText(jsonContent, Charsets.UTF_8)
-
-                // ۲. تلاش برای ذخیره در کارت حافظه / حافظه خارجی در صورت دسترسی
                 val storages = activity.getExternalFilesDirs(null)
                 for (storage in storages) {
                     if (storage != null) {
                         try {
-                            val extDir = File(storage, "DaftarHesabBackups")
-                            if (!extDir.exists()) extDir.mkdirs()
-                            File(extDir, fileName).writeText(jsonContent, Charsets.UTF_8)
+                            val rootPath = storage.absolutePath.substringBefore("/Android/")
+                            val documentsDir = File(rootPath, "Documents/DaftarHesab")
+                            
+                            if (!documentsDir.exists()) {
+                                documentsDir.mkdirs()
+                            }
+
+                            val newFile = File(documentsDir, fileName)
+                            newFile.writeText(jsonContent, Charsets.UTF_8)
+                            cleanOldFiles(documentsDir)
                         } catch (ex: Exception) {
                             ex.printStackTrace()
                         }
@@ -256,7 +295,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendBackupToTelegram() {
         try {
-            // استفاده از پوشه داخلی امن برای ساخت فایل اشتراکی
             val backupFile = File(filesDir, "daftar_hesab_backup.json")
             backupFile.writeText(buildJsonString(), Charsets.UTF_8)
             
@@ -277,8 +315,7 @@ class MainActivity : AppCompatActivity() {
             startActivity(chooser)
         } catch (e: Exception) {
             e.printStackTrace()
-            // نمایش متن دقیق خطا روی صفحه برای عیب‌یابی قطعی
-            Toast.makeText(this, "خطا: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "خطا در اشتراک‌گذاری فایل", Toast.LENGTH_LONG).show()
         }
     }
 
