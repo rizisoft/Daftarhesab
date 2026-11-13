@@ -123,11 +123,15 @@ class MainActivity : AppCompatActivity() {
             val fileName = "DaftarHesab_$dateStr.json"
 
             try {
-                // ذخیره‌سازی مطمئن در پوشه اختصاصی داخلی برنامه جهت تضمین ۱۰۰٪ عملکرد
-                val targetDir = File(activity.filesDir, "DaftarHesabBackups")
-                if (!targetDir.exists()) targetDir.mkdirs()
-                File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
-                cleanOldBackups(targetDir)
+                val storages = activity.getExternalFilesDirs(null)
+                for (storage in storages) {
+                    if (storage != null) {
+                        val targetDir = File(storage, "DaftarHesabBackups")
+                        if (!targetDir.exists()) targetDir.mkdirs()
+                        File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
+                        cleanOldBackups(targetDir)
+                    }
+                }
             } catch (e: Exception) {
                 e.printStackTrace()
             }
@@ -164,7 +168,6 @@ class MainActivity : AppCompatActivity() {
         dbFile = File(filesDir, "daftar_hesab_db.json")
         loadData()
 
-        // مقداردهی اولیه زمان‌سنج تلگرام برای جلوگیری از ارسال آنی در اولین اجرا
         val prefs = getSharedPreferences("DaftarPrefs", Context.MODE_PRIVATE)
         if (prefs.getLong("last_telegram_send", 0L) == 0L) {
             prefs.edit().putLong("last_telegram_send", System.currentTimeMillis()).apply()
@@ -176,14 +179,14 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         renderHome()
+        // بررسی هفتگی هنگام ورود به برنامه (امن و بدون مسدود شدن توسط اندروید)
+        checkAndSuggestWeeklyTelegramBackup()
     }
 
     override fun onStop() {
         super.onStop()
-        // پشتیبان‌گیری خودکار هنگام خروج
+        // پشتیبان‌گیری خودکار در حافظه هنگام خروج
         autoBackupAllStorages(this)
-        // بررسی بازه ۷ روزه برای پیشنهاد ارسال به تلگرام
-        checkAndSuggestWeeklyTelegramBackup()
     }
 
     private fun checkAndSuggestWeeklyTelegramBackup() {
@@ -193,8 +196,19 @@ class MainActivity : AppCompatActivity() {
         val sevenDaysInMillis = 7L * 24L * 60L * 60L * 1000L
 
         if (currentTime - lastSendTime > sevenDaysInMillis) {
-            prefs.edit().putLong("last_telegram_send", currentTime).apply()
-            sendBackupToTelegram()
+            AlertDialog.Builder(this)
+                .setTitle("پشتیبان‌گیری هفتگی تلگرام")
+                .setMessage("یک هفته از آخرین ارسال پشتیبان به تلگرام گذشته است. آیا می‌خواهید فایل پشتیبان را اکنون به تلگرام بفرستید؟")
+                .setPositiveButton("بله، ارسال به تلگرام") { _, _ ->
+                    prefs.edit().putLong("last_telegram_send", currentTime).apply()
+                    sendBackupToTelegram()
+                }
+                .setNegativeButton("بعداً یادآوری کن") { _, _ ->
+                    // اگر کاربر بعدا خواست، زمان را کمی عقب‌تر می‌اندازیم تا فردا دوباره یادآوری کند یا بسته به میل خودتان
+                    prefs.edit().putLong("last_telegram_send", currentTime - (6L * 24L * 60L * 60L * 1000L)).apply()
+                }
+                .setCancelable(false)
+                .show()
         }
     }
 
@@ -236,7 +250,7 @@ class MainActivity : AppCompatActivity() {
                         obj.getLong("customerId"),
                         obj.getString("type"),
                         obj.getString("description"),
-                        obj.getLong("amount"),
+                        obj.getString("amount").toLong(),
                         obj.getString("date")
                     )
                 )
@@ -260,7 +274,7 @@ class MainActivity : AppCompatActivity() {
             val newEntries = mutableListOf<Entry>()
             for (i in 0 until entryArray.length()) {
                 val obj = entryArray.getJSONObject(i)
-                newEntries.add(Entry(obj.getLong("id"), obj.getLong("customerId"), obj.getString("type"), obj.getString("description"), obj.getLong("amount"), obj.getString("date")))
+                newEntries.add(Entry(obj.getLong("id"), obj.getLong("customerId"), obj.getString("type"), obj.getString("description"), obj.getString("amount").toLong(), obj.getString("date")))
             }
             customers.clear()
             customers.addAll(newCusts)
@@ -276,9 +290,15 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendBackupToTelegram() {
         try {
-            val backupFile = File(cacheDir, "daftar_hesab_backup.json")
+            // ساخت امن فایل در پوشه داخلی filesDir برای اشتراک‌گذاری بدون خطا
+            val backupFile = File(filesDir, "daftar_hesab_backup.json")
             backupFile.writeText(buildJsonString(), Charsets.UTF_8)
-            val uri = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.fileprovider", backupFile)
+            
+            val uri = androidx.core.content.FileProvider.getUriForFile(
+                this, 
+                "$packageName.fileprovider", 
+                backupFile
+            )
 
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
@@ -287,9 +307,9 @@ class MainActivity : AppCompatActivity() {
             }
             
             val chooser = Intent.createChooser(intent, "ارسال پشتیبان به تلگرام")
-            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(chooser)
         } catch (e: Exception) {
+            e.printStackTrace()
             Toast.makeText(this, "خطا در اشتراک‌گذاری فایل", Toast.LENGTH_SHORT).show()
         }
     }
