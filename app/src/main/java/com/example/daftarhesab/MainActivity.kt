@@ -8,7 +8,6 @@ import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.Environment
 import android.view.Gravity
 import android.view.View
 import android.widget.*
@@ -81,55 +80,27 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        private fun cleanOldBackups(directory: File) {
-            try {
-                if (!directory.exists() || !directory.isDirectory) return
-                val files = directory.listFiles() ?: return
-                val now = System.currentTimeMillis()
-                val thirtyDaysInMillis = 30L * 24L * 60L * 60L * 1000L
-
-                for (file in files) {
-                    if (file.isFile && file.name.startsWith("DaftarHesab_") && file.name.endsWith(".json")) {
-                        if (now - file.lastModified() > thirtyDaysInMillis) {
-                            file.delete()
-                        }
-                    }
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
-            }
-        }
-
         fun autoBackupAllStorages(activity: AppCompatActivity) {
-            val jsonContent = buildJsonString()
-            val cal = Calendar.getInstance()
-            val gy = cal.get(Calendar.YEAR)
-            val gm = cal.get(Calendar.MONTH) + 1
-            val gd = cal.get(Calendar.DAY_OF_MONTH)
-            val gdm = intArrayOf(0, 31, 59, 90, 120, 151, 181, 212, 243, 273, 304, 334)
-            val gy2 = if (gm > 2) gy + 1 else gy
-            var days = 355666 + (365 * gy) + ((gy2 + 3) / 4) - ((gy2 + 99) / 100) + ((gy2 + 399) / 400) + gd + gdm[gm - 1]
-            var jy = -1595 + (33 * (days / 12053))
-            days %= 12053
-            jy += 4 * (days / 1461)
-            days %= 1461
-            if (days > 365) {
-                jy += (days - 1) / 365
-                days = (days - 1) % 365
-            }
-            val jm = if (days < 186) 1 + (days / 31) else 7 + ((days - 186) / 30)
-            val jd = 1 + (if (days < 186) (days % 31) else ((days - 186) % 30))
-            val dateStr = String.format(Locale.US, "%04d-%02d-%02d", jy, jm, jd)
-            val fileName = "DaftarHesab_$dateStr.json"
-
             try {
+                val jsonContent = buildJsonString()
+                val fileName = "DaftarHesab_Backup.json"
+
+                // ۱. ذخیره حتمی در حافظه داخلی برنامه (همیشه کار می‌کند)
+                val internalDir = File(activity.filesDir, "DaftarHesabBackups")
+                if (!internalDir.exists()) internalDir.mkdirs()
+                File(internalDir, fileName).writeText(jsonContent, Charsets.UTF_8)
+
+                // ۲. تلاش برای ذخیره در کارت حافظه / حافظه خارجی در صورت دسترسی
                 val storages = activity.getExternalFilesDirs(null)
                 for (storage in storages) {
                     if (storage != null) {
-                        val targetDir = File(storage, "DaftarHesabBackups")
-                        if (!targetDir.exists()) targetDir.mkdirs()
-                        File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
-                        cleanOldBackups(targetDir)
+                        try {
+                            val extDir = File(storage, "DaftarHesabBackups")
+                            if (!extDir.exists()) extDir.mkdirs()
+                            File(extDir, fileName).writeText(jsonContent, Charsets.UTF_8)
+                        } catch (ex: Exception) {
+                            ex.printStackTrace()
+                        }
                     }
                 }
             } catch (e: Exception) {
@@ -179,13 +150,11 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         renderHome()
-        // بررسی هفتگی هنگام ورود به برنامه (امن و بدون مسدود شدن توسط اندروید)
         checkAndSuggestWeeklyTelegramBackup()
     }
 
     override fun onStop() {
         super.onStop()
-        // پشتیبان‌گیری خودکار در حافظه هنگام خروج
         autoBackupAllStorages(this)
     }
 
@@ -203,10 +172,7 @@ class MainActivity : AppCompatActivity() {
                     prefs.edit().putLong("last_telegram_send", currentTime).apply()
                     sendBackupToTelegram()
                 }
-                .setNegativeButton("بعداً یادآوری کن") { _, _ ->
-                    // اگر کاربر بعدا خواست، زمان را کمی عقب‌تر می‌اندازیم تا فردا دوباره یادآوری کند یا بسته به میل خودتان
-                    prefs.edit().putLong("last_telegram_send", currentTime - (6L * 24L * 60L * 60L * 1000L)).apply()
-                }
+                .setNegativeButton("بعداً یادآوری کن", null)
                 .setCancelable(false)
                 .show()
         }
@@ -250,7 +216,7 @@ class MainActivity : AppCompatActivity() {
                         obj.getLong("customerId"),
                         obj.getString("type"),
                         obj.getString("description"),
-                        obj.getString("amount").toLong(),
+                        obj.optLong("amount", 0L),
                         obj.getString("date")
                     )
                 )
@@ -274,7 +240,7 @@ class MainActivity : AppCompatActivity() {
             val newEntries = mutableListOf<Entry>()
             for (i in 0 until entryArray.length()) {
                 val obj = entryArray.getJSONObject(i)
-                newEntries.add(Entry(obj.getLong("id"), obj.getLong("customerId"), obj.getString("type"), obj.getString("description"), obj.getString("amount").toLong(), obj.getString("date")))
+                newEntries.add(Entry(obj.getLong("id"), obj.getLong("customerId"), obj.getString("type"), obj.getString("description"), obj.optLong("amount", 0L), obj.getString("date")))
             }
             customers.clear()
             customers.addAll(newCusts)
@@ -290,7 +256,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun sendBackupToTelegram() {
         try {
-            // ساخت امن فایل در پوشه داخلی filesDir برای اشتراک‌گذاری بدون خطا
+            // استفاده از پوشه داخلی امن برای ساخت فایل اشتراکی
             val backupFile = File(filesDir, "daftar_hesab_backup.json")
             backupFile.writeText(buildJsonString(), Charsets.UTF_8)
             
@@ -307,10 +273,12 @@ class MainActivity : AppCompatActivity() {
             }
             
             val chooser = Intent.createChooser(intent, "ارسال پشتیبان به تلگرام")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             startActivity(chooser)
         } catch (e: Exception) {
             e.printStackTrace()
-            Toast.makeText(this, "خطا در اشتراک‌گذاری فایل", Toast.LENGTH_SHORT).show()
+            // نمایش متن دقیق خطا روی صفحه برای عیب‌یابی قطعی
+            Toast.makeText(this, "خطا: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
         }
     }
 
