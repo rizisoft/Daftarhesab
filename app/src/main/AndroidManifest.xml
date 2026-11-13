@@ -2,7 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- مجوزهای دسترسی به حافظه برای پشتیبان‌گیری خودکار -->
+    <!-- مجوزهای دسترسی به حافظه -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
@@ -17,7 +17,7 @@
         android:requestLegacyExternalStorage="true"
         android:theme="@style/Theme.AppCompat.Light.NoActionBar">
 
-        <!-- صفحه اول: لیست مشتریان -->
+        <!-- صفحه اصلی (لیست مشتریان) -->
         <activity
             android:name=".MainActivity"
             android:exported="true">
@@ -27,10 +27,21 @@
             </intent-filter>
         </activity>
 
-        <!-- صفحه دوم: جزئیات حساب و تراکنش‌های مشتری -->
+        <!-- صفحه جزئیات و تراکنش‌ها -->
         <activity
             android:name=".LedgerActivity"
             android:exported="false" />
+
+        <!-- تعریف FileProvider برای اشتراک‌گذاری امن فایل با تلگرام -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
     </application>
 
