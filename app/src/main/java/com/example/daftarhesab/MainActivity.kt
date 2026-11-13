@@ -123,8 +123,7 @@ class MainActivity : AppCompatActivity() {
             val fileName = "DaftarHesab_$dateStr.json"
 
             try {
-                val publicDocDir = activity.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS) ?: activity.filesDir
-                val targetDir = File(publicDocDir, "DaftarHesab")
+                val targetDir = File(activity.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "DaftarHesab")
                 if (!targetDir.exists()) targetDir.mkdirs()
                 File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
                 cleanOldBackups(targetDir)
@@ -173,10 +172,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        // پشتیبان‌گیری خودکار در پوشه اسناد هنگام خروج
         autoBackupAllStorages(this)
-
-        // بررسی اینکه آیا ۷ روز از آخرین ارسال به تلگرام گذشته است یا خیر
         checkAndSuggestWeeklyTelegramBackup()
     }
 
@@ -186,11 +182,8 @@ class MainActivity : AppCompatActivity() {
         val currentTime = System.currentTimeMillis()
         val sevenDaysInMillis = 7L * 24L * 60L * 60L * 1000L
 
-        // اگر ۷ روز (یا بیشتر) گذشته باشد
         if (currentTime - lastSendTime > sevenDaysInMillis) {
-            // ثبت زمان جدید برای اینکه تا ۷ روز آینده دوباره پرسیده نشود
             prefs.edit().putLong("last_telegram_send", currentTime).apply()
-            // اجرای ارسال به تلگرام
             sendBackupToTelegram()
         }
     }
@@ -280,22 +273,14 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(Intent.ACTION_SEND).apply {
                 type = "application/json"
                 putExtra(Intent.EXTRA_STREAM, uri)
-                setPackage("org.telegram.messenger")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             }
             
-            try {
-                startActivity(intent)
-            } catch (e: Exception) {
-                val generalIntent = Intent(Intent.ACTION_SEND).apply {
-                    type = "application/json"
-                    putExtra(Intent.EXTRA_STREAM, uri)
-                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-                }
-                startActivity(Intent.createChooser(generalIntent, "ارسال پشتیبان هفتگی به تلگرام"))
-            }
+            val chooser = Intent.createChooser(intent, "ارسال پشتیبان به تلگرام")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            startActivity(chooser)
         } catch (e: Exception) {
-            e.printStackTrace()
+            Toast.makeText(this, "خطا در اشتراک‌گذاری فایل", Toast.LENGTH_SHORT).show()
         }
     }
 
