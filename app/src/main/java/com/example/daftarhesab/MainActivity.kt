@@ -123,7 +123,8 @@ class MainActivity : AppCompatActivity() {
             val fileName = "DaftarHesab_$dateStr.json"
 
             try {
-                val targetDir = File(activity.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS), "DaftarHesab")
+                // ذخیره‌سازی مطمئن در پوشه اختصاصی داخلی برنامه جهت تضمین ۱۰۰٪ عملکرد
+                val targetDir = File(activity.filesDir, "DaftarHesabBackups")
                 if (!targetDir.exists()) targetDir.mkdirs()
                 File(targetDir, fileName).writeText(jsonContent, Charsets.UTF_8)
                 cleanOldBackups(targetDir)
@@ -162,6 +163,13 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         dbFile = File(filesDir, "daftar_hesab_db.json")
         loadData()
+
+        // مقداردهی اولیه زمان‌سنج تلگرام برای جلوگیری از ارسال آنی در اولین اجرا
+        val prefs = getSharedPreferences("DaftarPrefs", Context.MODE_PRIVATE)
+        if (prefs.getLong("last_telegram_send", 0L) == 0L) {
+            prefs.edit().putLong("last_telegram_send", System.currentTimeMillis()).apply()
+        }
+
         renderHome()
     }
 
@@ -172,7 +180,9 @@ class MainActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
+        // پشتیبان‌گیری خودکار هنگام خروج
         autoBackupAllStorages(this)
+        // بررسی بازه ۷ روزه برای پیشنهاد ارسال به تلگرام
         checkAndSuggestWeeklyTelegramBackup()
     }
 
